@@ -38,10 +38,10 @@ public class DBUtil {
 
     private static List<Note> noteList=new ArrayList<>();
     private static final int SIZE=64;
-    private static int start=0;
+    private static int start=-1;
     private static SortType sortType= BY_MODIFIED_TIME;
 
-    public static Note query(int index){
+    public static Note get(int index){
         if(index<start||index>=start+ noteList.size()){
             start= index-SIZE/2>0?index-SIZE/2:0;
             noteList = DataSupport.order(sortType+"desc").limit(SIZE).offset(start).find(Note.class);
@@ -63,7 +63,7 @@ public class DBUtil {
             noteList.get(index).save();
             // TODO: 2018/7/26 滚动到修改便签
             if(sortType!=SortType.BY_CREATED_TIME){
-                syncData();
+                start=-1;
             }
         }
     }
@@ -72,7 +72,7 @@ public class DBUtil {
         if(!note.getContent().trim().isEmpty()){
             note.save();
             // TODO: 2018/7/26  滚动到新便签
-            syncData();
+            start=-1;
         }else{
             Toast.makeText(MyApplication.getContext(),
                     "空便签将不会保存", Toast.LENGTH_SHORT).show();
@@ -82,6 +82,7 @@ public class DBUtil {
     public static void remove(int id){
         // TODO: 2018/7/26 回收站
         DataSupport.where("id=?",String.valueOf(id)).find(Note.class).get(0).delete();
+        start=-1;
     }
 
     public static void setSortType(SortType sortType) {
@@ -90,9 +91,5 @@ public class DBUtil {
 
     public static int getCounts(){
         return DataSupport.count(Note.class);
-    }
-
-    private static void syncData(){
-        noteList = DataSupport.order(sortType+"desc").limit(SIZE).offset(start).find(Note.class);
     }
 }
