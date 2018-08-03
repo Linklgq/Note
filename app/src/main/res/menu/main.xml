@@ -6,10 +6,4 @@
         android:orderInCategory="100"
         android:title="@string/action_settings"
         app:showAsAction="never"/>
-
-    <item
-        android:id="@+id/menu_remove"
-        android:title="删除"
-        android:icon="@drawable/ic_remove"
-        app:showAsAction="ifRoom"/>
 </menu>

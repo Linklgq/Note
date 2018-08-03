@@ -6,7 +6,6 @@ import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
@@ -16,16 +15,27 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
+import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
+import com.example.lenovo.note.recy.MyDividerItemDecoration;
+import com.example.lenovo.note.recy.MyViewHolder;
+import com.example.lenovo.note.recy.NoteAdapter;
+import com.example.lenovo.note.recy.NoteClickListener;
+import com.example.lenovo.note.recy.SelectCountsListener;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
     private static final String TAG = "MainActivity";
     private NoteAdapter adapter;
     private Toolbar toolbar;
-    private Toolbar selectToolbar;
-    private boolean isSelect=false;
+    private ActionBarDrawerToggle toggle;
+    private boolean select=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,7 +44,6 @@ public class MainActivity extends AppCompatActivity
 
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        selectToolbar=(Toolbar)findViewById(R.id.select_toolbar);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -45,11 +54,20 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-//        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-//        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-//                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-//        drawer.addDrawerListener(toggle);
-//        toggle.syncState();
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        toggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.addDrawerListener(toggle);
+        toggle.syncState();
+        toggle.setToolbarNavigationClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(select){
+                    setSelect(false);
+                }
+            }
+        });
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
@@ -58,15 +76,40 @@ public class MainActivity extends AppCompatActivity
 
         RecyclerView recyclerView=(RecyclerView)findViewById(R.id.content_main);
         LinearLayoutManager layoutManager=new LinearLayoutManager(this);
-//        StaggeredGridLayoutManager layoutManager=new StaggeredGridLayoutManager(
-//                2,StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
-        adapter=new NoteAdapter(this);
+        adapter=new NoteAdapter();
+        adapter.setNoteClickListener(new NoteClickListener() {
+            @Override
+            public void onClick(MyViewHolder holder) {
+                if(select){
+                    adapter.select(holder);
+                }
+            }
+
+            @Override
+            public boolean onLongClick(MyViewHolder holder) {
+                if(!select){
+                    setSelect(true);
+                    adapter.select(holder);
+                    return true;
+                }else{
+                    return false;
+                }
+            }
+        });
+        adapter.setSelectCountsListener(new SelectCountsListener() {
+            @Override
+            public void setCounts(int counts) {
+                if(select) {
+                    if (counts == 0) {
+                        setSelect(false);
+                    } else {
+                        toolbar.setTitle("选中 "+counts+" 项");
+                    }
+                }
+            }
+        });
         recyclerView.setAdapter(adapter);
-//        DividerItemDecoration divider=new DividerItemDecoration(this,
-//                DividerItemDecoration.VERTICAL);
-//        divider.setDrawable(ContextCompat.getDrawable(this,R.drawable.divider_rect));
-//        recyclerView.addItemDecoration(divider);
         MyDividerItemDecoration divider=new MyDividerItemDecoration(this,
                 DividerItemDecoration.HORIZONTAL);
         recyclerView.addItemDecoration(divider);
@@ -77,36 +120,25 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else if(isSelect){
+        } else if(select){
             setSelect(false);
-            adapter.setSelect(false);
-            adapter.notifyDataSetChanged();
-        }
-        else {
+        } else {
             super.onBackPressed();
         }
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-//        menu.clear();
-//        Log.d(TAG, "onCreateOptionsMenu: "+menu.hasVisibleItems());
-        if(isSelect){
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        menu.clear();
+        if(select){
+            toggle.setDrawerIndicatorEnabled(false);
+            toolbar.setBackgroundColor(getResources().getColor(R.color.gray7));
             getMenuInflater().inflate(R.menu.select_main, menu);
-
-            ActionBar actionBar=getSupportActionBar();
-            actionBar.setDisplayHomeAsUpEnabled(true);
-        }else {
+        }else{
+            toggle.setDrawerIndicatorEnabled(true);
+            toolbar.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
             getMenuInflater().inflate(R.menu.main, menu);
-
-            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-            ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                    this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-            drawer.addDrawerListener(toggle);
-            toggle.syncState();
         }
-//        Log.d(TAG, "onCreateOptionsMenu: create menu");
         return true;
     }
 
@@ -115,29 +147,32 @@ public class MainActivity extends AppCompatActivity
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
+        if(toggle.onOptionsItemSelected(item)){
+            Toast.makeText(this, "fuck1", Toast.LENGTH_SHORT).show();
+            return true;
+        }
         int id = item.getItemId();
         switch(id){
-            case android.R.id.home:
-                if(isSelect){
+            case android.R.id.home: {
+                Toast.makeText(this, "fuck2", Toast.LENGTH_SHORT).show();
+                if (select) {
                     setSelect(false);
-                    adapter.setSelect(false);
-                    adapter.notifyDataSetChanged();
                 }
                 break;
-            case R.id.menu_done_all:
+            }
+            case R.id.menu_done_all: {
                 adapter.selectAll();
                 adapter.notifyDataSetChanged();
                 break;
-            case R.id.menu_remove:
-                adapter.removeSelect();
-                adapter.setSelect(false);
-                adapter.notifyDataSetChanged();
+            }
+            case R.id.menu_remove: {
+                remove(adapter.getSelectedSet());
                 setSelect(false);
                 break;
+            }
         }
 
-//        return super.onOptionsItemSelected(item);
-        return true;
+        return super.onOptionsItemSelected(item);
     }
 
     @SuppressWarnings("StatementWithEmptyBody")
@@ -175,28 +210,24 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void setSelect(boolean select) {
-        isSelect = select;
-        if(isSelect){
-            toolbar.setVisibility(View.GONE);
-            selectToolbar.setVisibility(View.VISIBLE);
-            setSupportActionBar(selectToolbar);
-        }else{
-            selectToolbar.setVisibility(View.GONE);
-            toolbar.setVisibility(View.VISIBLE);
-            setSupportActionBar(toolbar);
-        }
-
-    }
-
-    public void setSelectedCounts(int counts){
-        if(counts==0){
-            setSelect(false);
-            adapter.setSelect(false);
-            adapter.notifyDataSetChanged();
-        }else{
-            selectToolbar.setTitle("选择 "+counts+" 项");
+        if(this.select!=select){
+            this.select=select;
+            adapter.setSelect(this.select);
+            if(!this.select){
+                adapter.notifyDataSetChanged();
+                toolbar.setTitle(R.string.app_name);
+            }
+            invalidateOptionsMenu();
         }
     }
 
-
+    public void remove(Set<Integer> set){
+        List<Note> tList=new ArrayList<>();
+        for(int i:set){
+            tList.add(DBUtil.get(i));
+        }
+        for(Note note:tList){
+            DBUtil.remove(note);
+        }
+    }
 }
