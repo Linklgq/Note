@@ -8,14 +8,15 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.ActionMode;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
@@ -35,7 +36,7 @@ public class MainActivity extends AppCompatActivity
     private NoteAdapter adapter;
     private Toolbar toolbar;
     private ActionBarDrawerToggle toggle;
-    private boolean select=false;
+    private ActionMode actionMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,23 +55,54 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
-        toggle.setToolbarNavigationClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(select){
-                    setSelect(false);
-                }
-            }
-        });
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        final ActionMode.Callback callback=new ActionMode.Callback(){
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                setSelect(true);
+                MenuInflater inflater=mode.getMenuInflater();
+                inflater.inflate(R.menu.select_main,menu);
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                switch(item.getItemId()){
+                    case R.id.menu_done_all: {
+                        adapter.selectAll();
+                        adapter.notifyDataSetChanged();
+                        return true;
+                    }
+                    case R.id.menu_remove: {
+                        remove(adapter.getSelectedSet());
+                        actionMode.finish();
+                        return true;
+                    }
+                    default:{
+                        return false;
+                    }
+                }
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+                setSelect(false);
+                actionMode=null;
+            }
+        };
 
         initTestData();
 
@@ -81,30 +113,31 @@ public class MainActivity extends AppCompatActivity
         adapter.setNoteClickListener(new NoteClickListener() {
             @Override
             public void onClick(MyViewHolder holder) {
-                if(select){
+                if(actionMode!=null){
                     adapter.select(holder);
+                }else{
+                    NoteEditActivity.startForResult(MainActivity.this
+                            ,DBUtil.get(holder.getAdapterPosition()));
                 }
             }
 
             @Override
             public boolean onLongClick(MyViewHolder holder) {
-                if(!select){
-                    setSelect(true);
-                    adapter.select(holder);
-                    return true;
-                }else{
-                    return false;
+                if(actionMode==null) {
+                    actionMode = startSupportActionMode(callback);
                 }
+                adapter.select(holder);
+                return true;
             }
         });
         adapter.setSelectCountsListener(new SelectCountsListener() {
             @Override
             public void setCounts(int counts) {
-                if(select) {
+                if(actionMode!=null) {
                     if (counts == 0) {
-                        setSelect(false);
+                        actionMode.finish();
                     } else {
-                        toolbar.setTitle("选中 "+counts+" 项");
+                        actionMode.setTitle("选中 "+counts+" 项");
                     }
                 }
             }
@@ -120,59 +153,9 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else if(select){
-            setSelect(false);
         } else {
             super.onBackPressed();
         }
-    }
-
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        menu.clear();
-        if(select){
-            toggle.setDrawerIndicatorEnabled(false);
-            toolbar.setBackgroundColor(getResources().getColor(R.color.gray7));
-            getMenuInflater().inflate(R.menu.select_main, menu);
-        }else{
-            toggle.setDrawerIndicatorEnabled(true);
-            toolbar.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
-            getMenuInflater().inflate(R.menu.main, menu);
-        }
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        if(toggle.onOptionsItemSelected(item)){
-            Toast.makeText(this, "fuck1", Toast.LENGTH_SHORT).show();
-            return true;
-        }
-        int id = item.getItemId();
-        switch(id){
-            case android.R.id.home: {
-                Toast.makeText(this, "fuck2", Toast.LENGTH_SHORT).show();
-                if (select) {
-                    setSelect(false);
-                }
-                break;
-            }
-            case R.id.menu_done_all: {
-                adapter.selectAll();
-                adapter.notifyDataSetChanged();
-                break;
-            }
-            case R.id.menu_remove: {
-                remove(adapter.getSelectedSet());
-                setSelect(false);
-                break;
-            }
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 
     @SuppressWarnings("StatementWithEmptyBody")
@@ -200,6 +183,12 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main,menu);
+        return true;
+    }
+
     private void initTestData(){
         for(int i=0;i<20;i++){
             Note note=new Note();
@@ -209,15 +198,10 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void setSelect(boolean select) {
-        if(this.select!=select){
-            this.select=select;
-            adapter.setSelect(this.select);
-            if(!this.select){
-                adapter.notifyDataSetChanged();
-                toolbar.setTitle(R.string.app_name);
-            }
-            invalidateOptionsMenu();
+    private void setSelect(boolean select) {
+        adapter.setSelect(select);
+        if (!select) {
+            adapter.notifyDataSetChanged();
         }
     }
 
