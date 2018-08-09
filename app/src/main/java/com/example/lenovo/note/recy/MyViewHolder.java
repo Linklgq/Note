@@ -1,5 +1,6 @@
 package com.example.lenovo.note.recy;
 
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
@@ -19,11 +20,17 @@ public abstract class MyViewHolder extends RecyclerView.ViewHolder {
 
     void setSelect(boolean select){
         if(select){
-            itemView.setBackgroundColor(MyApplication.getContext()
-                    .getResources().getColor(R.color.grayA));
+//            itemView.setAlpha(0.3f);
+//            itemView.setBackgroundColor(MyApplication.getContext()
+//                    .getResources().getColor(R.color.grayA));
+            itemView.setBackgroundColor(ContextCompat
+                    .getColor(MyApplication.getContext(),R.color.grayA));
         }else{
-            itemView.setBackgroundColor(MyApplication.getContext()
-                    .getResources().getColor(R.color.white));
+//            itemView.setBackgroundColor(MyApplication.getContext()
+//                    .getResources().getColor(R.color.white));
+//            itemView.setAlpha(1.0f);
+            itemView.setBackgroundColor(ContextCompat
+                    .getColor(MyApplication.getContext(),R.color.white));
         }
     }
 }

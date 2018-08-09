@@ -8,10 +8,8 @@ import android.widget.TextView;
 import com.example.lenovo.note.R;
 import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
-import com.example.lenovo.note.util.MyStringUtil;
+import com.example.lenovo.note.util.NoteAnalUtil;
 import com.example.lenovo.note.util.TimeUtil;
-
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * Created by Lenovo on 2018/8/3.
@@ -48,13 +46,10 @@ public class MyViewHolderFactory {
         @Override
         void bind(int position) {
             Note note= DBUtil.get(position);
-            String str=note.getContent();
-            keyword.setText(MyStringUtil.getFirstChar(str));
-            String title= StringUtils.substringBefore(str,"\n");
-            noteTitle.setText(title);
-            String content=StringUtils.substringBefore(
-                    StringUtils.substringAfter(str,"\n"),"\n");
-            noteContent.setText(content);
+            String str=NoteAnalUtil.rmStartWhiteChar(note.getContent());
+            keyword.setText(NoteAnalUtil.firstWorld(str));
+            noteTitle.setText(NoteAnalUtil.paragraph(str,0));
+            noteContent.setText(NoteAnalUtil.paragraph(str,1));
             updateTime.setText(TimeUtil.timeString(note.getModifiedTime()));
         }
     }

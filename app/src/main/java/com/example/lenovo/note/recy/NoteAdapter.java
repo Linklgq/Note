@@ -25,15 +25,6 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                int position=holder.getAdapterPosition();
-//                if(isSelect){
-//                    boolean b=!selectedSet.remove(position);
-//                    if(b){
-//                        selectedSet.add(position);
-//                    }
-//                    holder.setSelect(b);
-//                    mainActivity.setSelectedCounts(selectedSet.size());
-//                }
                 if(noteClickListener !=null) {
                     noteClickListener.onClick(holder);
                 }
@@ -42,15 +33,6 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
         holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-//                if(!isSelect){
-//                    setSelect(true);
-//                    selectedSet.add(holder.getAdapterPosition());
-//                    mainActivity.setSelect(true);
-//                    mainActivity.setSelectedCounts(selectedSet.size());
-//                    notifyDataSetChanged();
-//                    return true;
-//                }
-//                return false;
                 if(noteClickListener !=null) {
                     return noteClickListener.onLongClick(holder);
                 }
@@ -85,7 +67,6 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
         this.selectCountsListener = selectCountsListener;
     }
 
-    // FIXME: 2018/8/3
     public void setSelect(boolean select){
         this.select=select;
         selectedSet.clear();

@@ -12,6 +12,13 @@ public class Note extends DataSupport {
     private long modifiedTime;
     private String content;
 
+    public Note(){
+        long currentTime=System.currentTimeMillis();
+        createdTime=currentTime;
+        modifiedTime=currentTime;
+        content="";
+    }
+
     public int getId() {
         return id;
     }

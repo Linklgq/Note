@@ -15,13 +15,19 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:focusable="false">
         <EditText
             android:id="@+id/note_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="10dp"
+            android:layout_marginLeft="15dp"
+            android:layout_marginRight="15dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="15dp"
             android:background="@null"
-            android:textSize="20sp"></EditText>
+            android:textSize="20sp"
+            android:text="note"
+            android:hint="点击这里"></EditText>
     </ScrollView>
 </LinearLayout>

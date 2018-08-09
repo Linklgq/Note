@@ -4,6 +4,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.example.lenovo.note.MyApplication;
+import com.example.lenovo.note.util.NoteAnalUtil;
 
 import org.litepal.crud.DataSupport;
 
@@ -11,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static android.content.ContentValues.TAG;
-import static com.example.lenovo.note.db.DBUtil.SortType.BY_MODIFIED_TIME;
 
 /**
  * Created by Lenovo on 2018/7/26.
@@ -38,10 +38,11 @@ public class DBUtil {
         }
     }
 
+    /** 缓存*/
     private static List<Note> noteList=new ArrayList<>();
     private static final int SIZE=64;
     private static int start=0;
-    private static SortType sortType= BY_MODIFIED_TIME;
+    private static SortType sortType= SortType.BY_MODIFIED_TIME;
 
     public static Note get(int index){
         if(index<start||index>=start+ noteList.size()){
@@ -53,40 +54,52 @@ public class DBUtil {
     }
 
     public static void modify(int index){
-        if(index<start||index>=start+ noteList.size()){
-            Toast.makeText(MyApplication.getContext(), "imposible out of index",
-                    Toast.LENGTH_SHORT).show();
-        }else{
-            if(!noteList.get(index).getContent().trim().isEmpty()){
-                remove(noteList.get(index));
+//        if(index<start||index>=start+ noteList.size()){
+//            Toast.makeText(MyApplication.getContext(), "imposible out of index",
+//                    Toast.LENGTH_SHORT).show();
+//        }else{
+        noteList.clear();
+            if(NoteAnalUtil.rmStartWhiteChar(get(index).getContent()).isEmpty()){
+                remove(get(index));
                 Toast.makeText(MyApplication.getContext(),
                         "空便签已自动删除", Toast.LENGTH_SHORT).show();
                 return;
             }
-            noteList.get(index).save();
+//            noteList.get(index).save();
             // TODO: 2018/7/26 滚动到修改便签
             if(sortType!=SortType.BY_CREATED_TIME){
                 noteList.clear();
             }
+//        }
+    }
+
+    public static void modify(Note note){
+        noteList.clear();
+        if(NoteAnalUtil.rmStartWhiteChar(note.getContent()).isEmpty()){
+            remove(note);
+            Toast.makeText(MyApplication.getContext(),
+                    "空便签已自动删除", Toast.LENGTH_SHORT).show();
+        }else{
+            note.save();
         }
     }
 
-    public static void add(Note note){
-        if(!note.getContent().trim().isEmpty()){
-            note.save();
-            // TODO: 2018/7/26  滚动到新便签
-            noteList.clear();
-        }else{
+    public static boolean add(Note note){
+        if(NoteAnalUtil.rmStartWhiteChar(note.getContent()).isEmpty()){
             Toast.makeText(MyApplication.getContext(),
                     "空便签将不会保存", Toast.LENGTH_SHORT).show();
+            return false;
+        }else{
+            note.save();
+            noteList.clear();
+            return true;
         }
     }
 
     public static void remove(Note note){
-        // TODO: 2018/7/26 回收站
+        NoteAnalUtil.rmText(MyApplication.getContext(),note.getContent());
         note.delete();
         noteList.clear();
-        Log.d(TAG, "remove: 1"+".have "+getCounts());
     }
 
     public static void setSortType(SortType sortType) {

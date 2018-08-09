@@ -1,9 +1,9 @@
 package com.example.lenovo.note;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -32,6 +32,8 @@ import java.util.Set;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
+    public static final int EDIT_NOTE=0;
+    public static final int NEW_NOTE=1;
     private static final String TAG = "MainActivity";
     private NoteAdapter adapter;
     private Toolbar toolbar;
@@ -50,8 +52,7 @@ public class MainActivity extends AppCompatActivity
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                NoteEditActivity.startForResult(MainActivity.this,-1,NEW_NOTE);
             }
         });
 
@@ -88,7 +89,9 @@ public class MainActivity extends AppCompatActivity
                     }
                     case R.id.menu_remove: {
                         remove(adapter.getSelectedSet());
-                        actionMode.finish();
+                        if(actionMode!=null) {
+                            actionMode.finish();
+                        }
                         return true;
                     }
                     default:{
@@ -104,8 +107,6 @@ public class MainActivity extends AppCompatActivity
             }
         };
 
-        initTestData();
-
         RecyclerView recyclerView=(RecyclerView)findViewById(R.id.content_main);
         LinearLayoutManager layoutManager=new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
@@ -117,7 +118,7 @@ public class MainActivity extends AppCompatActivity
                     adapter.select(holder);
                 }else{
                     NoteEditActivity.startForResult(MainActivity.this
-                            ,DBUtil.get(holder.getAdapterPosition()));
+                            ,holder.getAdapterPosition(),EDIT_NOTE);
                 }
             }
 
@@ -187,6 +188,12 @@ public class MainActivity extends AppCompatActivity
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main,menu);
         return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        adapter.notifyDataSetChanged();
+//        Toast.makeText(this, "result", Toast.LENGTH_SHORT).show();
     }
 
     private void initTestData(){
