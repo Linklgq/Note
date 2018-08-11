@@ -1,9 +1,13 @@
 package com.example.lenovo.note.util;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.support.annotation.Nullable;
+
+import com.example.lenovo.note.R;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -11,6 +15,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import static android.graphics.BitmapFactory.decodeFile;
+import static android.graphics.BitmapFactory.decodeResource;
 
 /**
  * Created by Lenovo on 2018/8/7.
@@ -22,25 +27,43 @@ public class BitmapUtil {
     public static final int FOLLOW_WIDTH=2;
     public static final int FOLLOW_HEIGHT=3;
 
-//    public static Bitmap decodeFromResource(Resources res,int id,int reqWidth,int reqHeight){
-//        BitmapFactory.Options options = new BitmapFactory.Options();
-//        options.inJustDecodeBounds = true;
-//        BitmapFactory.decodeResource(res, id, options);
-//        options.inSampleSize = calculateSampleSize(options,reqWidth,reqHeight);
-//        options.inJustDecodeBounds =false;
-//        return  BitmapFactory.decodeResource(res,id,options);
-//    }
+    private static Bitmap failed;
+    private static final int failedId=R.drawable.failed_picture;
+    private static final int FAILED_WIDTH=300;
 
-    public static Bitmap decodeFromFile(String filePath,int reqWidth,int reqHeight){
+    public static Bitmap getFailed(Resources res){
+        if(failed==null){
+            failed=decodeFromResource(res, failedId,FAILED_WIDTH,NO_REQUEST);
+        }
+        return failed;
+    }
+
+    public static Bitmap decodeFromResource(Resources res, int id, int reqWidth, int reqHeight){
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        decodeResource(res, id, options);
+        options.inSampleSize = calculateSampleSize(options,reqWidth,reqHeight);
+        options.inJustDecodeBounds =false;
+        Bitmap temp=BitmapFactory.decodeResource(res,id,options);
+        Bitmap result=scaleTo(temp,reqWidth,0,FOLLOW_WIDTH);
+        temp.recycle();
+        return result;
+    }
+
+    @Nullable
+    public static Bitmap decodeFromFile(String filePath, int reqWidth, int reqHeight){
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         decodeFile(filePath,options);
         options.inSampleSize = calculateSampleSize(options,reqWidth,reqHeight);
         options.inJustDecodeBounds =false;
         Bitmap temp=BitmapFactory.decodeFile(filePath,options);
-        Bitmap res=scaleTo(temp,reqWidth,0,FOLLOW_WIDTH);
+        if(temp==null){
+            return null;
+        }
+        Bitmap result=scaleTo(temp,reqWidth,0,FOLLOW_WIDTH);
         temp.recycle();
-        return res;
+        return result;
     }
 
     private static Bitmap scaleTo(Bitmap oldBitmap,int afterWidth,int afterHeight,int scaleType){
@@ -57,7 +80,6 @@ public class BitmapUtil {
         }
         Bitmap newBitmap = Bitmap.createBitmap(oldBitmap,
                 0, 0, oldBitmap.getWidth(), oldBitmap.getHeight(), matrix, true);
-//        oldBitmap.recycle();
         return newBitmap;
     }
 
@@ -90,7 +112,7 @@ public class BitmapUtil {
             bitmap=BitmapFactory.decodeStream(in);
 
         }catch (FileNotFoundException e){
-            e.printStackTrace();
+            return getFailed(context.getResources());
         }finally {
             try {
                 if(in!=null){

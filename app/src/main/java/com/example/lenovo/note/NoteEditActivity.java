@@ -10,6 +10,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -33,8 +34,10 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.example.lenovo.note.db.DBUtil;
@@ -54,34 +57,30 @@ public class NoteEditActivity extends AppCompatActivity {
     }
 
     private static final String TAG = "NoteEditActivity";
-    private static final int TAKE_PHOTO=0;
-    private static final int CHOOSE_FROM_ALBUM=1;
+    public static final int TAKE_PHOTO=0;
+    public static final int CHOOSE_FROM_ALBUM=1;
     private ActionMode actionMode;
     private Toolbar toolbar;
     private EditText noteEdit;
     private final String[] photoItems={"拍照","从相册选择"};
     private AlertDialog photoDialog;
+//    private ProgressDialog progressDialog;
     File photo;
     private Uri photoUri;
     private Note note;
     private int index;
-    private int editorWidth;
+//    private int editorWidth;
+    private ProgressBar progressBar;
+    private ProgressBar loadNote;
+    private InsertPictureTask insertPictureTask;
+//    private int picCounts=0;
+    private LoadNotePicTask loadNotePicTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_note_edit);
 
-        noteEdit=(EditText)findViewById(R.id.note_edit);
-        noteEdit.post(new Runnable() {
-            @Override
-            public void run() {
-                editorWidth=noteEdit.getWidth();
-                Spannable content= NoteAnalUtil.contentAnalyze(note.getContent(),
-                        NoteEditActivity.this,editorWidth);
-                noteEdit.setText(content);
-            }
-        });
         toolbar=(Toolbar)findViewById(R.id.edit_toolbar);
         setSupportActionBar(toolbar);
 
@@ -97,6 +96,39 @@ public class NoteEditActivity extends AppCompatActivity {
         ActionBar actionBar=getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setTitle(TimeUtil.timeString(time));
+
+        noteEdit=(EditText)findViewById(R.id.note_edit);
+        noteEdit.setFocusable(false);
+        long time1=System.currentTimeMillis();
+        Spannable content=NoteAnalUtil.contentAnalyze(note.getContent(),
+                NoteEditActivity.this,
+                new NoteAnalUtil.MatchPictureListener() {
+                    @Override
+                    public void match(Bitmap bitmap, int start, int end) {
+//                        picCounts++;
+//                        ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
+//                        noteEdit.getText().setSpan(imageSpan, start, end,
+//                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+
+                    @Override
+                    public boolean cancel() {
+                        return false;
+                    }
+
+                    @Override
+                    public Bitmap customBitmap() {
+                        // FIXME: 2018/8/11 改为其他图片
+                        return BitmapUtil.getFailed(getResources());
+                    }
+                });
+        noteEdit.setText(content);
+        long time2=System.currentTimeMillis();
+        Log.d(TAG, "onCreate: "+(time2-time1)+"ms");
+
+        loadNote= (ProgressBar) findViewById(R.id.load_progress_bar);
+//        loadNote.setMax(picCounts*30);
+
         noteEdit.setCursorVisible(false);
         // TODO: 2018/8/8 复制粘贴
         noteEdit.addTextChangedListener(new TextWatcher() {
@@ -120,6 +152,31 @@ public class NoteEditActivity extends AppCompatActivity {
 
             }
         });
+
+//        picCounts=0;
+        loadNotePicTask=new LoadNotePicTask(note.getContent(), this,
+                new LoadNotePicTask.LoadNotePicListener() {
+                    @Override
+                    public void onMatch(Bitmap bitmap, int start, int end) {
+                        ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
+                        noteEdit.getText().setSpan(imageSpan,start,end,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//                        picCounts++;
+//                        for(int i=1;i<=30;i++){
+//                            loadNote.setProgress(picCounts*i);
+//                        }
+                    }
+
+                    @Override
+                    public void onCompleted(Spannable spannable) {
+//                        Log.d(TAG, "onCompleted: "+spannable.length());
+//                        noteEdit.setText(spannable);
+                        noteEdit.setFocusable(true);
+                        noteEdit.setFocusableInTouchMode(true);
+                        loadNote.setVisibility(View.GONE);
+                    }
+                });
+        loadNotePicTask.execute();
 
         final ActionMode.Callback callback=new ActionMode.Callback() {
             @Override
@@ -178,6 +235,7 @@ public class NoteEditActivity extends AppCompatActivity {
                 }
             }
         });
+        progressBar= (ProgressBar) findViewById(R.id.progress_bar);
     }
 
     @Override
@@ -190,9 +248,8 @@ public class NoteEditActivity extends AppCompatActivity {
         switch(requestCode){
             case TAKE_PHOTO:{
                 if(resultCode==RESULT_OK){
-                    insertPhoto(noteEdit.getText(),photo);
+                    insertPhoto(noteEdit.getText(),photo,TAKE_PHOTO);
                 }
-                photo.delete();
                 break;
             }
             case CHOOSE_FROM_ALBUM:{
@@ -204,7 +261,7 @@ public class NoteEditActivity extends AppCompatActivity {
                     cursor.moveToFirst();
                     String path=cursor.getString(cursor.getColumnIndex(filePathColumns[0]));
                     File file=new File(path);
-                    insertPhoto(noteEdit.getText(),file);
+                    insertPhoto(noteEdit.getText(),file,CHOOSE_FROM_ALBUM);
                 }
             }
         }
@@ -229,6 +286,22 @@ public class NoteEditActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if(loadNote.isShown()){
+            if(loadNotePicTask!=null&&loadNotePicTask.getStatus()== AsyncTask.Status.RUNNING){
+                loadNotePicTask.cancel(true);
+            }
+            loadNote.setVisibility(View.GONE);
+            Toast.makeText(this, "取消加载", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if(progressBar.isShown()){
+            if(insertPictureTask!=null&&insertPictureTask.getStatus()== AsyncTask.Status.RUNNING) {
+                insertPictureTask.cancel(true);
+            }
+            hideProgressBar();
+            Toast.makeText(this, "取消图片插入", Toast.LENGTH_SHORT).show();
+            return;
+        }
         saveNote();
         super.onBackPressed();
     }
@@ -279,20 +352,60 @@ public class NoteEditActivity extends AppCompatActivity {
         startActivityForResult(intent,TAKE_PHOTO);
     }
 
-    // FIXME: 2018/8/9 在其他线程下保存图片 
-    private void insertPhoto(Editable editable,File photo) {
-        Log.d(TAG, "insertPhoto: "+photo.getAbsolutePath());
-        Bitmap bitmap= BitmapUtil.decodeFromFile(photo.getAbsolutePath(),
-                editorWidth,BitmapUtil.NO_REQUEST);
-        String fileName=System.currentTimeMillis()+".png";
-        BitmapUtil.save(this,bitmap,fileName);
-        ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
-        SpannableString spannableString = new SpannableString(
-                "\n<img src=\""+fileName+"\">\n");
-        spannableString.setSpan(imageSpan, 1, spannableString.length() - 1,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        editable.insert(noteEdit.getSelectionStart(), spannableString);
-        Log.d(TAG, "insertPhoto: "+editable);
+//    // FIXME: 2018/8/9 在其他线程下保存图片
+//    private void insertPhoto(Editable editable,File photo) {
+//        Log.d(TAG, "insertPhoto: "+photo.getAbsolutePath());
+//        Bitmap bitmap= BitmapUtil.decodeFromFile(photo.getAbsolutePath(),
+//                editorWidth,BitmapUtil.NO_REQUEST);
+//        String fileName=System.currentTimeMillis()+".png";
+//        BitmapUtil.save(this,bitmap,fileName);
+//        ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
+//        SpannableString spannableString = new SpannableString(
+//                "\n<img src=\""+fileName+"\">\n");
+//        spannableString.setSpan(imageSpan, 1, spannableString.length() - 1,
+//                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//        editable.insert(noteEdit.getSelectionStart(), spannableString);
+//        Log.d(TAG, "insertPhoto: "+editable);
+//    }
+
+    private void insertPhoto(final Editable editable, File file,int srcType) {
+        insertPictureTask= new InsertPictureTask(this,
+                noteEdit.getWidth(), file, srcType,
+                new InsertPictureTask.InsertPictureListener() {
+                    @Override
+                    public void onSuccess(Bitmap bitmap,String fileName) {
+                        if(bitmap==null){
+                            bitmap= BitmapUtil.getFailed(getResources());
+                        }
+                        ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
+                        SpannableString spannableString = new SpannableString(
+                                "\n<img src=\""+fileName+"\">\n");
+                        spannableString.setSpan(imageSpan, 1, spannableString.length() - 1,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        editable.insert(noteEdit.getSelectionStart(), spannableString);
+//                        progressDialog.dismiss();
+                        hideProgressBar();
+                    }
+
+                    @Override
+                    public void onCanceled(String fileName) {
+                    }
+                });
+//        if(progressDialog==null){
+//            createProgressDialog();
+//        }
+//        progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+//            @Override
+//            public void onCancel(DialogInterface dialogInterface) {
+//                if(task!=null&&task.getStatus()== AsyncTask.Status.RUNNING) {
+//                    task.cancel(true);
+//                }
+//            }
+//        });
+//        progressDialog.show();
+//        task.execute();
+        displayProgressBar();
+        insertPictureTask.execute();
     }
 
     private void saveNote(){
@@ -334,6 +447,25 @@ public class NoteEditActivity extends AppCompatActivity {
                     }
                 })
                 .create();
+    }
+
+//    private void createProgressDialog(){
+//        progressDialog=new ProgressDialog(this);
+//        progressDialog.setMessage("加载图片...");
+//        // FIXME: 2018/8/9 以后再来看
+//        progressDialog.setCancelable(true);
+//        progressDialog.setCanceledOnTouchOutside(false);
+//    }
+
+    private void hideProgressBar(){
+        progressBar.setVisibility(View.GONE);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+    }
+
+    private void displayProgressBar(){
+        progressBar.setVisibility(View.VISIBLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
     }
 
     private void openAlbum(){

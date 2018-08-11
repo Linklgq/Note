@@ -10,11 +10,6 @@
         <item name="actionModeBackground">@color/colorPrimary</item>
     </style>
 
-    <style name="AppTheme.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-    </style>
-
     <style name="AppTheme.GrayActionMode">
         <item name="actionModeBackground">@color/gray7</item>
     </style>

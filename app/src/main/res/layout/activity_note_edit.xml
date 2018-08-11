@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
     <android.support.v7.widget.Toolbar
@@ -11,23 +10,45 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         android:theme="@style/AppTheme.AppBarOverlay"
-        app:popupTheme="@style/AppTheme.PopupOverlay"></android.support.v7.widget.Toolbar>
+        app:popupTheme="@style/AppTheme.PopupOverlay"
+        android:layout_alignParentTop="true"
+        >
+    </android.support.v7.widget.Toolbar>
+
+    <ProgressBar
+        android:id="@+id/load_progress_bar"
+        style="@style/Widget.AppCompat.ProgressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignRight="@id/edit_toolbar"
+        android:layout_margin="5dp"/>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:focusable="false">
+        android:layout_below="@id/edit_toolbar"
+        android:focusable="false"
+        android:id="@+id/scrollView">
         <EditText
             android:id="@+id/note_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="15dp"
             android:layout_marginRight="15dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="15dp"
             android:background="@null"
-            android:textSize="20sp"
-            android:text="note"
-            android:hint="点击这里"></EditText>
+            android:hint="点击这里"
+            android:paddingBottom="15dp"
+            android:paddingTop="10dp"
+            android:textSize="20sp"></EditText>
     </ScrollView>
-</LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        ></ProgressBar>
+
+
+</RelativeLayout>
