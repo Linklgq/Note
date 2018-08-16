@@ -22,8 +22,8 @@ public class InsertPictureTask extends AsyncTask<Void,Integer,Boolean>{
     }
 
     private Context context;
+
     private int reqWidth;
-    // FIXME: 2018/8/10 改为String
     private File file;
     private int srcType;
     private InsertPictureListener insertPictureListener;
@@ -44,7 +44,7 @@ public class InsertPictureTask extends AsyncTask<Void,Integer,Boolean>{
         long time1=System.currentTimeMillis();  ///////////////////////
 
         bitmap= BitmapUtil.decodeFromFile(file.getAbsolutePath(),
-                reqWidth,BitmapUtil.NO_REQUEST);
+                reqWidth);
 
         long time2=System.currentTimeMillis();  ////////////////////
         Log.d(TAG, "doInBackground: "+(time2-time1)+"ms");
@@ -62,7 +62,7 @@ public class InsertPictureTask extends AsyncTask<Void,Integer,Boolean>{
         }
         publishProgress();
         if(bitmap!=null) {
-            BitmapUtil.save(context, bitmap, fileName);
+            BitmapUtil.save(bitmap, fileName);
         }
 
         long time3=System.currentTimeMillis();  ////////////////////////

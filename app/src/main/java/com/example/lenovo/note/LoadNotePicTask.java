@@ -3,9 +3,9 @@ package com.example.lenovo.note;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
-import android.text.Spannable;
 import android.util.Log;
 
+import com.example.lenovo.note.util.BitmapUtil;
 import com.example.lenovo.note.util.NoteAnalUtil;
 
 import static android.content.ContentValues.TAG;
@@ -17,7 +17,7 @@ import static android.content.ContentValues.TAG;
 public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Boolean> {
     public interface LoadNotePicListener{
         void onMatch(Bitmap bitmap, int start, int end);
-        void onCompleted(Spannable spannable);
+        void onCompleted();
     }
 
     public static class Options{
@@ -35,12 +35,12 @@ public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Bool
     private CharSequence text;
     private Context context;
     private LoadNotePicListener loadNotePicListener;
-    Spannable spannable;
+    private int picWidth;
 
-    public LoadNotePicTask(CharSequence text, Context context, LoadNotePicListener loadNotePicListener) {
+    public LoadNotePicTask(CharSequence text,LoadNotePicListener loadNotePicListener) {
         this.text = text;
-        this.context = context;
         this.loadNotePicListener = loadNotePicListener;
+        context=MyApplication.getContext();
     }
 
     @Override
@@ -49,21 +49,17 @@ public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Bool
             return false;
         }
         long time1=System.currentTimeMillis();
-        spannable=NoteAnalUtil.contentAnalyze(text,context,
+        NoteAnalUtil.contentAnalyze(text,
                 new NoteAnalUtil.MatchPictureListener(){
                     @Override
-                    public void match(Bitmap bitmap, int start, int end) {
+                    public void match(String picName, int start, int end) {
+                        Bitmap bitmap= BitmapUtil.load(picName,picWidth);
                         publishProgress(new Options(bitmap,start,end));
                     }
 
                     @Override
                     public boolean cancel() {
                         return isCancelled();
-                    }
-
-                    @Override
-                    public Bitmap customBitmap() {
-                        return null;
                     }
                 });
         long time2=System.currentTimeMillis();
@@ -82,15 +78,17 @@ public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Bool
 
     @Override
     protected void onPostExecute(Boolean aBoolean) {
-        loadNotePicListener.onCompleted(spannable);
+        loadNotePicListener.onCompleted();
         loadNotePicListener=null;
-        spannable=null;
     }
 
     @Override
     protected void onCancelled() {
-        loadNotePicListener.onCompleted(spannable);
+        loadNotePicListener.onCompleted();
         loadNotePicListener=null;
-        spannable=null;
+    }
+
+    public void setPicWidth(int picWidth) {
+        this.picWidth = picWidth;
     }
 }

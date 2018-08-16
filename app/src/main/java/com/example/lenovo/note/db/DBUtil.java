@@ -59,7 +59,7 @@ public class DBUtil {
 //                    Toast.LENGTH_SHORT).show();
 //        }else{
         noteList.clear();
-            if(NoteAnalUtil.rmStartWhiteChar(get(index).getContent()).isEmpty()){
+            if(NoteAnalUtil.trimWhiteChar(get(index).getContent()).isEmpty()){
                 remove(get(index));
                 Toast.makeText(MyApplication.getContext(),
                         "空便签已自动删除", Toast.LENGTH_SHORT).show();
@@ -75,7 +75,7 @@ public class DBUtil {
 
     public static void modify(Note note){
         noteList.clear();
-        if(NoteAnalUtil.rmStartWhiteChar(note.getContent()).isEmpty()){
+        if(NoteAnalUtil.trimWhiteChar(note.getContent()).isEmpty()){
             remove(note);
             Toast.makeText(MyApplication.getContext(),
                     "空便签已自动删除", Toast.LENGTH_SHORT).show();
@@ -85,7 +85,7 @@ public class DBUtil {
     }
 
     public static boolean add(Note note){
-        if(NoteAnalUtil.rmStartWhiteChar(note.getContent()).isEmpty()){
+        if(NoteAnalUtil.trimWhiteChar(note.getContent()).isEmpty()){
             Toast.makeText(MyApplication.getContext(),
                     "空便签将不会保存", Toast.LENGTH_SHORT).show();
             return false;
@@ -97,7 +97,7 @@ public class DBUtil {
     }
 
     public static void remove(Note note){
-        NoteAnalUtil.rmText(MyApplication.getContext(),note.getContent());
+        NoteAnalUtil.rmText(note.getContent());
         note.delete();
         noteList.clear();
     }

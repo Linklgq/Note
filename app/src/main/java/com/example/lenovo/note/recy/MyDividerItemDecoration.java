@@ -6,6 +6,7 @@ import android.graphics.Rect;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.view.View;
 
 /**
@@ -21,6 +22,8 @@ public class MyDividerItemDecoration extends DividerItemDecoration {
     public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
         if(parent.getLayoutManager()instanceof LinearLayoutManager){
             outRect.set(0,8,0,8);
+        }else if(parent.getLayoutManager()instanceof StaggeredGridLayoutManager){
+            outRect.set(12,12,12,12);
         }
 //        outRect.set(12,12,12,12);
     }

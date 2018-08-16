@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="4dp"
                 android:textSize="18sp"
-                android:lines="1"
+                android:maxLines="1"
                 android:ellipsize="end"
                 android:textColor="#010101"
                 android:text="sdfkdk"></TextView>
@@ -58,6 +58,8 @@
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:textSize="16sp"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:text="world"></TextView>
     </LinearLayout>
 </LinearLayout>

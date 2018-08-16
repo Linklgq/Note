@@ -1,6 +1,7 @@
 package com.example.lenovo.note.recy;
 
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -9,19 +10,27 @@ import com.example.lenovo.note.db.DBUtil;
 import java.util.HashSet;
 import java.util.Set;
 
+import static android.content.ContentValues.TAG;
+
 /**
  * Created by Lenovo on 2018/7/27.
  */
 
 public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
+    static int count=0;
+
     private NoteClickListener noteClickListener;
     private SelectCountsListener selectCountsListener;
     private boolean select=false;
+    private boolean scroll=false;
     private Set<Integer> selectedSet=new HashSet<>();
+    private int layoutType=MyViewHolderFactory.DEFAULT;
+    private int width;
 
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        final MyViewHolder holder=MyViewHolderFactory.newInstance(parent,viewType);
+        Log.d(TAG, "onCreateViewHolder: "+count++);
+        final MyViewHolder holder=MyViewHolderFactory.getType(parent,viewType);
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -44,7 +53,7 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
 
     @Override
     public void onBindViewHolder(MyViewHolder holder, int position) {
-        holder.bind(position);
+        holder.bind(position,scroll,width);
         holder.setSelect(selectedSet.contains(position));
     }
 
@@ -56,7 +65,26 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
     @Override
     public int getItemViewType(int position) {
         // TODO: 2018/7/27 多种布局
-        return MyViewHolderFactory.DEFAULT;
+        return layoutType;
+    }
+
+    @Override
+    public void onViewRecycled(MyViewHolder holder) {
+        super.onViewRecycled(holder);
+        holder.recycled();
+        Log.d(TAG, "onViewRecycled: cancel task");
+    }
+
+    @Override
+    public void onViewAttachedToWindow(MyViewHolder holder) {
+        super.onViewAttachedToWindow(holder);
+        Log.d(TAG, "onViewAttachedToWindow: ");
+    }
+
+    @Override
+    public void onViewDetachedFromWindow(MyViewHolder holder) {
+        super.onViewDetachedFromWindow(holder);
+        Log.d(TAG, "onViewDetachedFromWindow: ");
     }
 
     public void setNoteClickListener(NoteClickListener noteClickListener) {
@@ -98,7 +126,6 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
         for(int i=0;i<n;i++){
             selectedSet.add(i);
         }
-
         if(selectCountsListener!=null){
             selectCountsListener.setCounts(selectedSet.size());
         }
@@ -106,5 +133,30 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
 
     public Set<Integer> getSelectedSet() {
         return selectedSet;
+    }
+
+    public boolean setLayoutType(int layoutType) {
+        if(this.layoutType!=layoutType){
+            this.layoutType = layoutType;
+            return true;
+        }
+        return false;
+    }
+
+    public int getLayoutType() {
+        return layoutType;
+    }
+
+    public boolean isScroll() {
+        return scroll;
+    }
+
+
+    public void setScroll(boolean scroll) {
+        this.scroll = scroll;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
     }
 }

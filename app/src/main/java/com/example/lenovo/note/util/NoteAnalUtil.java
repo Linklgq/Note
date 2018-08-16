@@ -1,13 +1,12 @@
 package com.example.lenovo.note.util;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.text.Spannable;
 import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.style.ImageSpan;
 import android.util.Log;
+
+import com.example.lenovo.note.MyApplication;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,15 +19,12 @@ import static android.content.ContentValues.TAG;
 
 public class NoteAnalUtil {
     public interface MatchPictureListener {
-        void match(Bitmap bitmap, int start, int end);
-
+        void match(String picName, int start, int end);
         boolean cancel();
-
-        Bitmap customBitmap();
     }
 
-    private static final String PIC_KEYWORLD = "图";
-    private static final String PIC_WORD = "[图片]";
+    public static final String PIC_KEYWORLD = "图";
+    public static final String PIC_WORD = "[图片]";
     public static final String PIC_NAME = "\\d+.png";
     public static final String PIC_TAG = "<img src=\"" + PIC_NAME + "\">";
 
@@ -47,14 +43,14 @@ public class NoteAnalUtil {
         return res;
     }
 
-    public static Spannable contentToString(String str) {
+    public static String contentToString(String str) {
         String str1 = str.replaceAll(PIC_TAG, PIC_WORD);
-        return new SpannableString(str1);
+        return str1;
     }
 
-    public static Spannable contentAnalyze(CharSequence text, Context context,
+    public static void contentAnalyze(CharSequence text,
                                            MatchPictureListener matchPictureListener) {
-        Spannable spannable = new SpannableString(text);
+//        Spannable spannable = new SpannableString(text);
         Matcher matcher = Pattern.compile(PIC_TAG).matcher(text);
         while (matcher.find()) {
             if (matchPictureListener != null && matchPictureListener.cancel()) {
@@ -62,52 +58,57 @@ public class NoteAnalUtil {
             }
             Matcher m = Pattern.compile(PIC_NAME).matcher(matcher.group());
             if (m.find()) {
-                Bitmap bitmap;
-                if (matchPictureListener == null || matchPictureListener.customBitmap() == null) {
-                    long time1=System.currentTimeMillis();
-                    bitmap = BitmapUtil.load(context, m.group());
-                    long time2=System.currentTimeMillis();
-                    Log.d(TAG, "contentAnalyze: "+(time2-time1)+"ms");
-                } else {
-                    bitmap = matchPictureListener.customBitmap();
-                }
-                ImageSpan imageSpan = new ImageSpan(context, bitmap);
-                spannable.setSpan(imageSpan, matcher.start(), matcher.end(),
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//                Bitmap bitmap;
+//                if (matchPictureListener == null || matchPictureListener.customBitmap() == null) {
+//                    long time1=System.currentTimeMillis();
+//                    bitmap = BitmapUtil.load(m.group());
+//                    long time2=System.currentTimeMillis();
+//                    Log.d(TAG, "contentAnalyze: "+(time2-time1)+"ms");
+//                } else {
+//                    bitmap = matchPictureListener.customBitmap();
+//                }
+//                ImageSpan imageSpan = new ImageSpan(context, bitmap);
+//                spannable.setSpan(imageSpan, matcher.start(), matcher.end(),
+//                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 if (matchPictureListener != null) {
-                    matchPictureListener.match(bitmap, matcher.start(), matcher.end());
+                    matchPictureListener.match(m.group(), matcher.start(), matcher.end());
                 }
             }
         }
-        return spannable;
     }
 
-    public static Spannable paragraph(String str, int index) {
-        Spannable res;
-        String[] array = str.split("\n", index + 2);
+    public static String paragraph(String text, int index) {
+        String str;
+        String[] array = text.split("\n", index + 2);
         Log.d(TAG, "paragraph: " + array.length);
         if (index < array.length) {
-            res = contentToString(array[index]);
+            str = array[index];
         } else {
-            res = new SpannableString("");
+            str = "";
         }
-        return res;
+        return str;
     }
 
     @NonNull
-    public static String rmStartWhiteChar(String str) {
-        int i;
+    public static String trimWhiteChar(String str) {
+        int i,j;
         for (i = 0; i < str.length(); i++) {
             if (!Character.isWhitespace(str.charAt(i))) {
                 break;
             }
         }
-        return str.substring(i);
+        for(j=str.length()-1;j>=0&&j>i;j--){
+            if (!Character.isWhitespace(str.charAt(j))) {
+                break;
+            }
+        }
+        return str.substring(i,j+1);
     }
 
-    public static void rmText(Context context, CharSequence charSequence) {
+    public static void rmText(CharSequence charSequence) {
+        Context context= MyApplication.getContext();
         Matcher matcher = Pattern.compile(PIC_TAG).matcher(charSequence);
-        // 删除插入图片时，删除图片文件
+        // 删除图片文件
         while (matcher.find()) {
             Matcher m = Pattern.compile(PIC_NAME).matcher(matcher.group());
             if (m.find()) {

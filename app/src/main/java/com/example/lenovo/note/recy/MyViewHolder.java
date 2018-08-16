@@ -16,7 +16,7 @@ public abstract class MyViewHolder extends RecyclerView.ViewHolder {
         super(itemView);
     }
 
-    abstract void bind(int position);
+    public abstract void bind(int position,boolean scroll,int w);
 
     void setSelect(boolean select){
         if(select){
@@ -33,4 +33,8 @@ public abstract class MyViewHolder extends RecyclerView.ViewHolder {
                     .getColor(MyApplication.getContext(),R.color.white));
         }
     }
+
+    void recycled(){}
+
+    public void updateView(){}
 }
