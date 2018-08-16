@@ -2,8 +2,11 @@ package com.example.lenovo.note.util;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 
 import com.example.lenovo.note.MyApplication;
@@ -33,6 +36,8 @@ public class NoteAnalUtil {
         Matcher matcher = Pattern.compile("^" + PIC_TAG).matcher(str);
         if (matcher.find() && matcher.start() == 0) {
             res = new SpannableString(PIC_KEYWORLD);
+            res.setSpan(new ForegroundColorSpan(0xFFCD6839),0,1,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         } else {
             char c = str.charAt(0);
             if (c >= 'a' && c <= 'z') {
@@ -46,6 +51,18 @@ public class NoteAnalUtil {
     public static String contentToString(String str) {
         String str1 = str.replaceAll(PIC_TAG, PIC_WORD);
         return str1;
+    }
+
+    @Nullable
+    public static String firstPic(CharSequence text){
+        Matcher matcher = Pattern.compile(PIC_TAG).matcher(text);
+        while (matcher.find()) {
+            Matcher m = Pattern.compile(PIC_NAME).matcher(matcher.group());
+            if(m.find()){
+                return m.group();
+            }
+        }
+        return null;
     }
 
     public static void contentAnalyze(CharSequence text,
@@ -112,6 +129,7 @@ public class NoteAnalUtil {
         while (matcher.find()) {
             Matcher m = Pattern.compile(PIC_NAME).matcher(matcher.group());
             if (m.find()) {
+                // FIXME: 2018/8/16 当图片还正在保存？
                 context.deleteFile(m.group());
 //                Toast.makeText(context, "删除图片", Toast.LENGTH_SHORT).show();
             }

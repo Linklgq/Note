@@ -71,6 +71,8 @@ public class NoteEditActivity extends AppCompatActivity {
     private ProgressBar loadNote;
     private InsertPictureTask insertPictureTask;
     private LoadNotePicTask loadNotePicTask;
+    private Bitmap firstPic;
+    private String firstPicName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -284,6 +286,12 @@ public class NoteEditActivity extends AppCompatActivity {
                 new InsertPictureTask.InsertPictureListener() {
                     @Override
                     public void onSuccess(Bitmap bitmap,String fileName) {
+                        // 该图片会成为第一张图片
+                        if(NoteAnalUtil.firstPic(
+                                editable.subSequence(0,editor.getSelectionStart()))==null){
+                            firstPic=bitmap;
+                            firstPicName=fileName;
+                        }
                         if(bitmap==null){
                             bitmap= BitmapUtil.getFailed();
                         }
@@ -312,12 +320,29 @@ public class NoteEditActivity extends AppCompatActivity {
         }
         note.setContent(editor.getText().toString());
         note.setModifiedTime(System.currentTimeMillis());
+        
+        // 将第一张图片添加到缓存
+        if(firstPicName!=null&&firstPicName.equals(NoteAnalUtil
+                .firstPic(editor.getText()))){
+            BitmapUtil.addBitmapToCache(firstPicName,firstPic);
+            Log.d(TAG, "saveNote: 将第一张图片添加到缓存 "+firstPicName);
+        }
+        
         if(index<0){    // 添加便签
             DBUtil.add(note);
-            setResult(RESULT_FIRST_USER);
+            Intent intent=new Intent();
+            intent.putExtra("id",note.getId());
+            setResult(RESULT_OK,intent);
         }else{          // 修改便签
-            DBUtil.modify(note);
-            setResult(RESULT_OK);
+            Intent intent=new Intent();
+            intent.putExtra("id",note.getId());
+            intent.putExtra("index",index);
+            if(DBUtil.modify(note)){
+                setResult(RESULT_OK,intent);
+            }else{
+                DBUtil.remove(note);
+                setResult(RESULT_FIRST_USER,intent);
+            }
         }
     }
 

@@ -81,6 +81,7 @@ public class MyViewHolderFactory {
         TextView updateTime;
 
         boolean matchPic=false;
+        boolean havePic=false;
         String fileName;
         int begin;
         String text;
@@ -177,6 +178,7 @@ public class MyViewHolderFactory {
                     fileName=picName;
                     begin=start;
                     matchPic=true;
+                    havePic=true;
                     Log.d(TAG, "match: "+text+" "+fileName);
                     Bitmap bitmap=BitmapUtil.cachedBitmap(picName);
                     if(bitmap==null){
@@ -192,6 +194,7 @@ public class MyViewHolderFactory {
                         }
                     }else{
                         bitmap=BitmapUtil.scaleTo(bitmap, width, 1.0);
+                        havePic=false;
                     }
                     Log.d(TAG, "match: spannable "+spannable+" "+start);
                     ImageSpan imageSpan = new ImageSpan(itemView.getContext(), bitmap);
@@ -227,28 +230,32 @@ public class MyViewHolderFactory {
                             if(bitmap==null){
                                 Log.d(TAG, "onComplete: bitmap is null");
                             }
+                            if(!havePic){
+                                return;
+                            }
                             Spannable spannable=new SpannableString(text);
                             ImageSpan imageSpan = new ImageSpan(itemView.getContext(), bitmap);
                             spannable.setSpan(imageSpan, begin, begin+NoteAnalUtil.PIC_WORD.length(),
                                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                             noteContent.setText(spannable);
 
-                            matchPic=false;
+                            havePic=false;
                         }
                     });
-            task.execute();
+            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         }
 
         @Override
         void recycled() {
             cancelTask();
-            matchPic=false;
+            havePic=false;
         }
 
         @Override
         public void updateView() {
-            if(matchPic){
+            if(havePic){
                 execTask();
+                Log.d(TAG, "updateView: have pic");
             }
         }
     }

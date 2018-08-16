@@ -11,6 +11,7 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -21,7 +22,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
@@ -34,6 +34,7 @@ import com.example.lenovo.note.recy.SelectCountsListener;
 import com.example.lenovo.note.util.AnimationUtil;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -83,6 +84,8 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         final ActionMode.Callback callback=new ActionMode.Callback(){
+            boolean done=false;
+            
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 setSelect(true);
@@ -106,6 +109,7 @@ public class MainActivity extends AppCompatActivity
                     }
                     case R.id.menu_remove: {
                         remove(adapter.getSelectedSet());
+                        done=true;
                         if(actionMode!=null) {
                             actionMode.finish();
                         }
@@ -121,6 +125,9 @@ public class MainActivity extends AppCompatActivity
             public void onDestroyActionMode(ActionMode mode) {
                 setSelect(false);
                 actionMode=null;
+                if(!done){
+                    adapter.notifyDataSetChanged();
+                }
             }
         };
 
@@ -206,6 +213,11 @@ public class MainActivity extends AppCompatActivity
         MyDividerItemDecoration divider=new MyDividerItemDecoration(this,
                 DividerItemDecoration.HORIZONTAL);
         recyclerView.addItemDecoration(divider);
+
+        DefaultItemAnimator itemAnimator=new DefaultItemAnimator();
+//        itemAnimator.setAddDuration(1000);
+//        itemAnimator.setRemoveDuration(1000);
+        recyclerView.setItemAnimator(itemAnimator);
     }
 
     @Override
@@ -265,12 +277,37 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        adapter.notifyDataSetChanged();
-//        Toast.makeText(this, "result", Toast.LENGTH_SHORT).show();
+//        adapter.notifyDataSetChanged();
+        // FIXME: 2018/8/16 完善
+        if(requestCode==NEW_NOTE){
+            if(resultCode==RESULT_OK){
+                int id=data.getIntExtra("id",0);
+                int position=DBUtil.getRank(id, DBUtil.SortType.BY_MODIFIED_TIME)-1;
+                adapter.notifyItemInserted(position);
+                recyclerView.smoothScrollToPosition(position);
+                Log.d(TAG, "onActivityResult: "+position);
+            }
+        }else if(requestCode==EDIT_NOTE){
+            if(resultCode==RESULT_OK){
+                int index=data.getIntExtra("index",0);
+                int id=data.getIntExtra("id",0);
+                int position=DBUtil.getRank(id, DBUtil.SortType.BY_MODIFIED_TIME)-1;
+                adapter.notifyItemMoved(index,position);
+                adapter.notifyItemChanged(position);
+                // TODO: 2018/8/16 用scrollToPosition没效果，找原因
+                recyclerView.smoothScrollToPosition(position);
+
+                Log.d(TAG, "onActivityResult: change from "+index+" to "+position);
+            }else if(resultCode==RESULT_FIRST_USER){
+                int index=data.getIntExtra("index",0);
+                adapter.notifyItemRemoved(index);
+                Log.d(TAG, "onActivityResult: remove "+index);
+            }
+        }
     }
 
     private void createLayoutDialog(){
-        Toast.makeText(this, "create layoutdialog", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "create layoutdialog", Toast.LENGTH_SHORT).show();
          layoutDialog=new AlertDialog.Builder(this)
                 .setSingleChoiceItems(layoutItems, 0, new DialogInterface.OnClickListener() {
                     @Override
@@ -299,18 +336,36 @@ public class MainActivity extends AppCompatActivity
         if(select){
             AnimationUtil.animateOut(fab,AnimationUtil.INTERPOLATOR,null);
         }else {
-            adapter.notifyDataSetChanged();
+//            adapter.notifyDataSetChanged();
             AnimationUtil.animateIn(fab,AnimationUtil.INTERPOLATOR,null);
         }
     }
 
+//    public void remove(Set<Integer> set){
+//        List<Note> tList=new ArrayList<>();
+//        for(int i:set){
+//            tList.add(DBUtil.get(i));
+//        }
+//        for(Note note:tList){
+//            DBUtil.remove(note);
+//        }
+//    }
+
     public void remove(Set<Integer> set){
-        List<Note> tList=new ArrayList<>();
-        for(int i:set){
-            tList.add(DBUtil.get(i));
+        List<Integer> mList=new ArrayList<>(set.size());
+        for(Integer integer:set){
+            mList.add(integer);
         }
-        for(Note note:tList){
+        // 升序排序
+        Collections.sort(mList);
+
+        Note note;
+        int position;
+        for(int i=0;i<mList.size();i++){
+            position=mList.get(i)-i;
+            note= DBUtil.get(position);
             DBUtil.remove(note);
+            adapter.notifyItemRemoved(position);
         }
     }
 }

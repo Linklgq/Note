@@ -73,6 +73,7 @@ public class BitmapUtil {
         for(int i=mCachedBitmaps.size()-1;i>=0;i--){
             if(name.equals(mCachedBitmaps.get(i).name)){
                 bitmap=mCachedBitmaps.get(i).data;
+                Log.d(TAG, "cachedBitmap: get cache "+name);
                 break;
             }
         }

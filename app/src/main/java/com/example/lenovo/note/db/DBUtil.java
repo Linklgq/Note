@@ -1,5 +1,6 @@
 package com.example.lenovo.note.db;
 
+import android.database.Cursor;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -18,9 +19,6 @@ import static android.content.ContentValues.TAG;
  */
 
 public class DBUtil {
-//    public static final int BY_CREATED_TIME=0;
-//    public static final int BY_MODIFIED_TIME=1;
-//    public static final int BY_CONTENT=2;
     public enum SortType{
         BY_CREATED_TIME("createdTime"),
         BY_MODIFIED_TIME("modifiedTime"),
@@ -53,6 +51,12 @@ public class DBUtil {
         return noteList.get(index-start);
     }
 
+    public static Note findById(int id){
+        Note note=DataSupport.select("id").where("id = ?",String.valueOf(id))
+                .find(Note.class).get(0);
+        return note;
+    }
+
     public static void modify(int index){
 //        if(index<start||index>=start+ noteList.size()){
 //            Toast.makeText(MyApplication.getContext(), "imposible out of index",
@@ -73,14 +77,13 @@ public class DBUtil {
 //        }
     }
 
-    public static void modify(Note note){
+    public static boolean modify(Note note){
         noteList.clear();
         if(NoteAnalUtil.trimWhiteChar(note.getContent()).isEmpty()){
-            remove(note);
-            Toast.makeText(MyApplication.getContext(),
-                    "空便签已自动删除", Toast.LENGTH_SHORT).show();
+            return false;
         }else{
             note.save();
+            return true;
         }
     }
 
@@ -108,5 +111,21 @@ public class DBUtil {
 
     public static int getCounts(){
         return DataSupport.count(Note.class);
+    }
+
+    public static int getRank(int id,SortType type){
+        int rank=0;
+        String sql="";
+        if(type==SortType.BY_CREATED_TIME||type==SortType.BY_MODIFIED_TIME) {
+            sql="select count(id) from Note where "+type.toString()
+                    +">=(select "+type.toString()+" from Note where id="+id+")";
+            Cursor cursor = DataSupport.findBySQL(sql);
+            if(cursor.moveToFirst()){
+                rank=cursor.getInt(0);
+            }
+            cursor.close();
+        }
+        Log.d(TAG, "getRank: "+rank+" \n"+sql);
+        return rank;
     }
 }
