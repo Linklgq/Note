@@ -40,8 +40,9 @@ public class LoadThumbnailTask extends AsyncTask<Void,Integer,Boolean> {
         if(isCancelled()){
             return false;
         }
+
+        BitmapUtil.putCache(picName,bitmap);
         bitmap=BitmapUtil.scaleTo(bitmap,width,1.0);
-        BitmapUtil.addBitmapToCache(picName,bitmap);
 //        long time3=System.currentTimeMillis();
 //        Log.d(TAG, "doInBackground: "+(time3-time2)+"ms");
         return true;

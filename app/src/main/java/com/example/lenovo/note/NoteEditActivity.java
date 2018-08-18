@@ -91,13 +91,12 @@ public class NoteEditActivity extends AppCompatActivity {
         }
         long time=note.getModifiedTime();
 
+        loadNote= (ProgressBar) findViewById(R.id.load_progress_bar);
         initEditor();
 
         ActionBar actionBar=getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setTitle(TimeUtil.timeString(time));
-
-        loadNote= (ProgressBar) findViewById(R.id.load_progress_bar);
 
         final ActionMode.Callback callback=new ActionMode.Callback() {
             @Override
@@ -324,7 +323,7 @@ public class NoteEditActivity extends AppCompatActivity {
         // 将第一张图片添加到缓存
         if(firstPicName!=null&&firstPicName.equals(NoteAnalUtil
                 .firstPic(editor.getText()))){
-            BitmapUtil.addBitmapToCache(firstPicName,firstPic);
+            BitmapUtil.putCache(firstPicName,firstPic);
             Log.d(TAG, "saveNote: 将第一张图片添加到缓存 "+firstPicName);
         }
         
@@ -389,30 +388,11 @@ public class NoteEditActivity extends AppCompatActivity {
 
     private void initEditor(){
         editor =(EditText)findViewById(R.id.note_edit);
-        editor.setFocusable(false);
         editor.setCursorVisible(false);
         editor.setText(note.getContent());
 
-        long time1=System.currentTimeMillis();
-        NoteAnalUtil.contentAnalyze(note.getContent(),
-                new NoteAnalUtil.MatchPictureListener() {
-                    @Override
-                    public void match(String picName, int start, int end) {
-                        Bitmap bitmap=BitmapUtil.getFailed();
-                        ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
-                        editor.getText().setSpan(imageSpan, start, end,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-
-                    @Override
-                    public boolean cancel() {
-                        return false;
-                    }
-                });
-        long time2=System.currentTimeMillis();
-        Log.d(TAG, "onCreate: "+(time2-time1)+"ms");
-
         // TODO: 2018/8/8 复制粘贴
+        // FIXME: 2018/8/18 加载时也会触发
         editor.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence,
@@ -422,27 +402,39 @@ public class NoteEditActivity extends AppCompatActivity {
                     CharSequence cs=charSequence.subSequence(start,start+count);
                     NoteAnalUtil.rmText(cs);
                 }
+
+                Log.d(TAG, "beforeTextChanged: before");
             }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int start, int before, int count) {
-
+                Log.d(TAG, "onTextChanged: on");
             }
 
             @Override
             public void afterTextChanged(Editable editable) {
-
+                Log.d(TAG, "afterTextChanged: after");
             }
         });
+
+
+
+        if(NoteAnalUtil.firstPic(note.getContent())==null){
+            return;
+        }
+
+        editor.setFocusable(false);
+        loadNote.setVisibility(View.VISIBLE);
 
         loadNotePicTask=new LoadNotePicTask(note.getContent(),
                 new LoadNotePicTask.LoadNotePicListener() {
                     @Override
                     public void onMatch(Bitmap bitmap, int start, int end) {
-                        Log.d(TAG, "onMatch: "+bitmap);
                         ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
+                        // FIXME: 2018/8/17 改为替换
                         editor.getText().setSpan(imageSpan,start,end,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        editor.setText(editor.getText());
                     }
 
                     @Override
@@ -456,6 +448,31 @@ public class NoteEditActivity extends AppCompatActivity {
         editor.post(new Runnable() {
             @Override
             public void run() {
+                NoteAnalUtil.contentAnalyze(note.getContent(),
+                        new NoteAnalUtil.MatchPictureListener() {
+                            boolean isFirst=true;
+
+                            @Override
+                            public void match(String picName, int start, int end) {
+                                Bitmap bitmap=null;
+                                if(isFirst){
+                                    isFirst=false;
+                                    bitmap=BitmapUtil.getCache(picName);
+                                    bitmap=BitmapUtil.scaleTo(bitmap,editor.getWidth(),-1.0);
+                                }
+                                if(bitmap==null) {
+                                    bitmap = BitmapUtil.getFailed();
+                                }
+                                ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
+                                editor.getText().setSpan(imageSpan, start, end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            }
+
+                            @Override
+                            public boolean cancel() {
+                                return false;
+                            }
+                        });
                 loadNotePicTask.setPicWidth(editor.getWidth());
                 loadNotePicTask.execute();
             }

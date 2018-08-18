@@ -123,11 +123,16 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void onDestroyActionMode(ActionMode mode) {
+                if(!done){
+//                    adapter.notifyDataSetChanged();
+                    Set<Integer> set=adapter.getSelectedSet();
+                    for(int i:set){
+                        adapter.notifyItemChanged(i);
+                    }
+                }
                 setSelect(false);
                 actionMode=null;
-                if(!done){
-                    adapter.notifyDataSetChanged();
-                }
+                done=false;
             }
         };
 
@@ -177,11 +182,9 @@ public class MainActivity extends AppCompatActivity
                 super.onScrollStateChanged(recyclerView, newState);
                 if(newState==RecyclerView.SCROLL_STATE_IDLE){
                     adapter.setScroll(false);
-//                    adapter.notifyDataSetChanged();
-//                    GRID_LAYOUT.invalidateSpanAssignments();
                     long time1=System.currentTimeMillis();
 
-                    if(layoutType==MyViewHolderFactory.GRID){
+                    if(layoutType== GRID){
                         recyclerView.post(new Runnable() {
                             @Override
                             public void run() {
@@ -215,8 +218,6 @@ public class MainActivity extends AppCompatActivity
         recyclerView.addItemDecoration(divider);
 
         DefaultItemAnimator itemAnimator=new DefaultItemAnimator();
-//        itemAnimator.setAddDuration(1000);
-//        itemAnimator.setRemoveDuration(1000);
         recyclerView.setItemAnimator(itemAnimator);
     }
 
@@ -319,10 +320,10 @@ public class MainActivity extends AppCompatActivity
                                 layoutType=MyViewHolderFactory.DEFAULT;
                             }
                         }else if("网格布局".equals(layoutItems[i])){
-                            if(adapter.setLayoutType(MyViewHolderFactory.GRID)){
+                            if(adapter.setLayoutType(GRID)){
                                 recyclerView.setLayoutManager(GRID_LAYOUT);
                                 recyclerView.setPadding(12,0,12,12);
-                                layoutType=MyViewHolderFactory.GRID;
+                                layoutType= GRID;
                             }
                         }
                         layoutDialog.dismiss();
@@ -340,16 +341,6 @@ public class MainActivity extends AppCompatActivity
             AnimationUtil.animateIn(fab,AnimationUtil.INTERPOLATOR,null);
         }
     }
-
-//    public void remove(Set<Integer> set){
-//        List<Note> tList=new ArrayList<>();
-//        for(int i:set){
-//            tList.add(DBUtil.get(i));
-//        }
-//        for(Note note:tList){
-//            DBUtil.remove(note);
-//        }
-//    }
 
     public void remove(Set<Integer> set){
         List<Integer> mList=new ArrayList<>(set.size());

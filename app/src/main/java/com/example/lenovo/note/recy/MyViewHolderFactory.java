@@ -180,7 +180,7 @@ public class MyViewHolderFactory {
                     matchPic=true;
                     havePic=true;
                     Log.d(TAG, "match: "+text+" "+fileName);
-                    Bitmap bitmap=BitmapUtil.cachedBitmap(picName);
+                    Bitmap bitmap=BitmapUtil.getCache(picName);
                     if(bitmap==null){
                         bitmap=BitmapUtil.getLoading(width);
                         BitmapFactory.Options options = BitmapUtil.measureFromFile(

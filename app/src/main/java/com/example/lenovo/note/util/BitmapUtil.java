@@ -7,14 +7,13 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.support.annotation.Nullable;
 import android.util.Log;
+import android.util.LruCache;
 
 import com.example.lenovo.note.MyApplication;
 import com.example.lenovo.note.R;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.List;
-import java.util.Vector;
 
 import static android.content.ContentValues.TAG;
 import static android.graphics.BitmapFactory.decodeFile;
@@ -26,30 +25,43 @@ import static android.graphics.BitmapFactory.decodeResource;
 
 public class BitmapUtil {
     public static final int NO_REQUEST=0;
-    public static final int WIDTH_AND_HEIGHT=1;
-    public static final int FOLLOW_WIDTH=2;
-    public static final int FOLLOW_HEIGHT=3;
+
+    public static class BitmapCache extends LruCache<String,Bitmap>{
+        public BitmapCache(int maxSize) {
+            super(maxSize);
+            Log.d(TAG, "BitmapCache: "+maxSize/1024/1024+"MB");
+        }
+
+        @Override
+        protected int sizeOf(String key, Bitmap value) {
+            Log.d(TAG, "sizeOf: "+value.getByteCount()/1024+"KB");
+            return value.getByteCount();
+        }
+    }
 
     private static Bitmap failed;
     private static final int FAILED_ID =R.drawable.failed_picture;
     private static final int DEFAULT_WIDTH=300;
 
-    static class BitmapNode{
-        String name;
-        Bitmap data;
-
-        public BitmapNode(String name, Bitmap data) {
-            this.name = name;
-            this.data = data;
-        }
-    }
-
-    private static int sCachedSize=16;
-    private static int sCachedWidth=256;
-    private static final List<BitmapNode> mCachedBitmaps=new Vector<>(sCachedSize);
+//    static class BitmapNode{
+//        String name;
+//        Bitmap data;
+//
+//        public BitmapNode(String name, Bitmap data) {
+//            this.name = name;
+//            this.data = data;
+//        }
+//    }
+//
+//    private static int sCachedSize=16;
+//    private static final List<BitmapNode> mCachedBitmaps=new Vector<>(sCachedSize);
 
     private static Bitmap loading;
-    private static final int LOADING_ID=R.drawable.loading;
+    private static final int LOADING_ID=R.drawable.loading_bg;
+
+    private static int sCachedWidth=256;
+    private static final int DEFAULT_CACHE_SIZE=(int)(Runtime.getRuntime().maxMemory()/16);
+    private static final BitmapCache BITMAP_CACHE =new BitmapCache(DEFAULT_CACHE_SIZE);
 
     public static Bitmap getFailed(){
         if(failed==null){
@@ -65,43 +77,59 @@ public class BitmapUtil {
         return loading;
     }
 
-    public static Bitmap cachedBitmap(String name){
-        if(name==null){
+    public static Bitmap getCache(String key){
+        if(key==null){
             return null;
         }
-        Bitmap bitmap=null;
-        for(int i=mCachedBitmaps.size()-1;i>=0;i--){
-            if(name.equals(mCachedBitmaps.get(i).name)){
-                bitmap=mCachedBitmaps.get(i).data;
-                Log.d(TAG, "cachedBitmap: get cache "+name);
-                break;
-            }
-        }
-        return bitmap;
+        return BITMAP_CACHE.get(key);
     }
 
-    public static void addBitmapToCache(String name,Bitmap data){
-        if(name==null){
+    public static void putCache(String key,Bitmap value){
+        if(key==null||value==null){
+            Log.d(TAG, "putCache: key "+(key==null)+",value "+(value==null));
             return;
         }
-        // 如果已缓存，将其移到队尾
-        for(int i=mCachedBitmaps.size()-1;i>=0;i--){
-            if(name.equals(mCachedBitmaps.get(i).name)){
-                BitmapNode node=mCachedBitmaps.get(i);
-                mCachedBitmaps.remove(i);
-                mCachedBitmaps.add(node);
-                return;
-            }
-        }
-        // 如果队列已达最大长度，移除队首元素
-        if(mCachedBitmaps.size()==sCachedSize){
-            mCachedBitmaps.remove(0);
-        }
-
-        data=scaleTo(data,sCachedWidth,-1.0);
-        mCachedBitmaps.add(new BitmapNode(name,data));
-        Log.d(TAG, "addBitmapToCache: "+name);
+        value=scaleTo(value,sCachedWidth,-1.0);
+        BITMAP_CACHE.put(key,value);
     }
+
+//    public static Bitmap cachedBitmap(String name){
+//        if(name==null){
+//            return null;
+//        }
+//        Bitmap bitmap=null;
+//        for(int i=mCachedBitmaps.size()-1;i>=0;i--){
+//            if(name.equals(mCachedBitmaps.get(i).name)){
+//                bitmap=mCachedBitmaps.get(i).data;
+//                Log.d(TAG, "cachedBitmap: get cache "+name);
+//                break;
+//            }
+//        }
+//        return bitmap;
+//    }
+//
+//    public static void addBitmapToCache(String name,Bitmap data){
+//        if(name==null){
+//            return;
+//        }
+//        // 如果已缓存，将其移到队尾
+//        for(int i=mCachedBitmaps.size()-1;i>=0;i--){
+//            if(name.equals(mCachedBitmaps.get(i).name)){
+//                BitmapNode node=mCachedBitmaps.get(i);
+//                mCachedBitmaps.remove(i);
+//                mCachedBitmaps.add(node);
+//                return;
+//            }
+//        }
+//        // 如果队列已达最大长度，移除队首元素
+//        if(mCachedBitmaps.size()==sCachedSize){
+//            mCachedBitmaps.remove(0);
+//        }
+//
+//        data=scaleTo(data,sCachedWidth,-1.0);
+//        mCachedBitmaps.add(new BitmapNode(name,data));
+//        Log.d(TAG, "addBitmapToCache: "+name);
+//    }
 
     public static Bitmap decodeFromResource(int id, int reqWidth){
         if(reqWidth<=0){
@@ -130,6 +158,7 @@ public class BitmapUtil {
             return BitmapFactory.decodeFile(filePath);
         }
         BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPreferredConfig= Bitmap.Config.RGB_565;
         options.inJustDecodeBounds = true;
         decodeFile(filePath,options);
         options.inSampleSize = calculateSampleSize(options,reqWidth,0);
@@ -140,8 +169,8 @@ public class BitmapUtil {
         }
         Log.d(TAG, "decodeFromFile: "+temp.getWidth()+" "+temp.getHeight());
         Bitmap result=scaleTo(temp,reqWidth,-1.0);
-        Log.d(TAG, "decodeFromFile: "+result.getWidth()+" "+result.getHeight());
-
+        Log.d(TAG, "decodeFromFile: result "+result.getWidth()+" "+result.getHeight());
+        Log.d(TAG, "decodeFromFile: result "+result.getByteCount()/1024/1024+"MB");
 //        temp.recycle();
         return result;
     }
@@ -179,6 +208,8 @@ public class BitmapUtil {
                     afterWidth*1.0f/width);
         Bitmap newBitmap = Bitmap.createBitmap(oldBitmap,
                 0, 0, width,height, matrix, true);
+
+        Log.d(TAG, "scaleTo: "+width+" "+height);
         return newBitmap;
     }
 
