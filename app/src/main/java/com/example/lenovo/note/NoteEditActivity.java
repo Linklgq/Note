@@ -39,8 +39,8 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
+import com.example.lenovo.note.db.NoteDBUtil;
 import com.example.lenovo.note.util.BitmapUtil;
 import com.example.lenovo.note.util.NoteAnalUtil;
 import com.example.lenovo.note.util.TimeUtil;
@@ -73,11 +73,14 @@ public class NoteEditActivity extends AppCompatActivity {
     private LoadNotePicTask loadNotePicTask;
     private Bitmap firstPic;
     private String firstPicName;
+    private boolean haveSave=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_note_edit);
+
+        Log.d(TAG, "onCreate: ");
 
         toolbar=(Toolbar)findViewById(R.id.edit_toolbar);
         setSupportActionBar(toolbar);
@@ -87,7 +90,7 @@ public class NoteEditActivity extends AppCompatActivity {
         if(index<0){
             note=new Note();
         }else{
-            note= DBUtil.get(index);
+            note= NoteDBUtil.get(index);
         }
         long time=note.getModifiedTime();
 
@@ -312,9 +315,13 @@ public class NoteEditActivity extends AppCompatActivity {
     }
 
     private void saveNote(){
+        Log.d(TAG, "saveNote: "+note);
+
         // 没有修改
         if(note.getContent().equals(editor.getText().toString())){
-            setResult(RESULT_CANCELED);
+            if(!haveSave) {
+                setResult(RESULT_CANCELED);
+            }
             return;
         }
         note.setContent(editor.getText().toString());
@@ -328,20 +335,36 @@ public class NoteEditActivity extends AppCompatActivity {
         }
         
         if(index<0){    // 添加便签
-            DBUtil.add(note);
             Intent intent=new Intent();
             intent.putExtra("id",note.getId());
-            setResult(RESULT_OK,intent);
+            boolean result;
+            if(haveSave){
+                result=NoteDBUtil.update(note);
+            }else{
+                result=NoteDBUtil.add(note);
+            }
+            if(result){
+                setResult(RESULT_OK,intent);
+            }else{
+                setResult(RESULT_CANCELED,intent);
+            }
+            if(haveSave&&!result){
+                NoteDBUtil.remove(note);
+                haveSave=false;
+            }else{
+                haveSave=true;
+            }
         }else{          // 修改便签
             Intent intent=new Intent();
             intent.putExtra("id",note.getId());
             intent.putExtra("index",index);
-            if(DBUtil.modify(note)){
+            if(NoteDBUtil.update(note)){
                 setResult(RESULT_OK,intent);
             }else{
-                DBUtil.remove(note);
+                NoteDBUtil.remove(note);
                 setResult(RESULT_FIRST_USER,intent);
             }
+            haveSave=true;
         }
     }
 
@@ -458,7 +481,9 @@ public class NoteEditActivity extends AppCompatActivity {
                                 if(isFirst){
                                     isFirst=false;
                                     bitmap=BitmapUtil.getCache(picName);
-                                    bitmap=BitmapUtil.scaleTo(bitmap,editor.getWidth(),-1.0);
+                                    if(bitmap!=null) {
+                                        bitmap = BitmapUtil.scaleTo(bitmap, editor.getWidth(), -1.0);
+                                    }
                                 }
                                 if(bitmap==null) {
                                     bitmap = BitmapUtil.getFailed();

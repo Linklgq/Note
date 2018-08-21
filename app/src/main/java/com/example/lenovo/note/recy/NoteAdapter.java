@@ -5,7 +5,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.example.lenovo.note.db.DBUtil;
+import com.example.lenovo.note.db.NoteDBUtil;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -59,7 +59,7 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
 
     @Override
     public int getItemCount() {
-        return DBUtil.getCounts();
+        return NoteDBUtil.count();
     }
 
     @Override

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <litepal>
     <dbname value="note"></dbname>
-    <version value="1"></version>
+    <version value="2"></version>
     <list>
         <mapping class="com.example.lenovo.note.db.Note"></mapping>
+        <mapping class="com.example.lenovo.note.db.Folder"></mapping>
+        <mapping class="com.example.lenovo.note.db.NoteFolder"></mapping>
     </list>
 </litepal>

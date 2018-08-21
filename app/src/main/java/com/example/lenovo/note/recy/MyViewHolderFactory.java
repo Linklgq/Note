@@ -16,8 +16,8 @@ import android.widget.TextView;
 import com.example.lenovo.note.LoadThumbnailTask;
 import com.example.lenovo.note.MyApplication;
 import com.example.lenovo.note.R;
-import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
+import com.example.lenovo.note.db.NoteDBUtil;
 import com.example.lenovo.note.util.BitmapUtil;
 import com.example.lenovo.note.util.NoteAnalUtil;
 import com.example.lenovo.note.util.TimeUtil;
@@ -64,7 +64,7 @@ public class MyViewHolderFactory {
 
         @Override
         public void bind(int position, boolean scroll, int w) {
-            Note note = DBUtil.get(position);
+            Note note = NoteDBUtil.get(position);
             String str = NoteAnalUtil.trimWhiteChar(note.getContent());
             keyword.setText(NoteAnalUtil.firstWorld(str));
             noteTitle.setText(NoteAnalUtil.contentToString(NoteAnalUtil.paragraph(str, 0)));
@@ -166,7 +166,7 @@ public class MyViewHolderFactory {
                 return;
             }
 
-            Note note = DBUtil.get(position);
+            Note note = NoteDBUtil.get(position);
             updateTime.setText(TimeUtil.timeString(note.getModifiedTime()));
             String content = NoteAnalUtil.trimWhiteChar(note.getContent());
             text=NoteAnalUtil.contentToString(content);

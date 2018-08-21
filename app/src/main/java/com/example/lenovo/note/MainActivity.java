@@ -1,5 +1,6 @@
 package com.example.lenovo.note;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -23,8 +24,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 
-import com.example.lenovo.note.db.DBUtil;
 import com.example.lenovo.note.db.Note;
+import com.example.lenovo.note.db.NoteDBUtil;
 import com.example.lenovo.note.recy.MyDividerItemDecoration;
 import com.example.lenovo.note.recy.MyViewHolder;
 import com.example.lenovo.note.recy.MyViewHolderFactory;
@@ -42,6 +43,13 @@ import static com.example.lenovo.note.recy.MyViewHolderFactory.GRID;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
+    public static void actionStart(Context context,int folderId,String folderName){
+        Intent intent=new Intent(context,MainActivity.class);
+        intent.putExtra("folderId",folderId);
+        intent.putExtra("folderName",folderName);
+        context.startActivity(intent);
+    }
+
     public static final int EDIT_NOTE=0;
     public static final int NEW_NOTE=1;
     private static final String TAG = "MainActivity";
@@ -192,6 +200,8 @@ public class MainActivity extends AppCompatActivity
                                 int[] intoEnd=GRID_LAYOUT.findLastVisibleItemPositions(null);
                                 int start=intoStart[0]<intoStart[1]?intoStart[0]:intoStart[1];
                                 int end=intoEnd[0]>intoEnd[1]?intoEnd[0]:intoEnd[1];
+                                start=start<0?0:start;
+                                end=end<0?0:end;
                                 for(int i=start;i<=end;i++){
                                     ((MyViewHolder)recyclerView.findViewHolderForLayoutPosition(i))
                                             .updateView();
@@ -235,24 +245,32 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
-        }
-
+//        int id = item.getItemId();
+//
+//        if (id == R.id.nav_camera) {
+//            // Handle the camera action
+//        } else if (id == R.id.nav_gallery) {
+//
+//        } else if (id == R.id.nav_slideshow) {
+//
+//        } else if (id == R.id.nav_manage) {
+//
+//        } else if (id == R.id.nav_share) {
+//
+//        } else if (id == R.id.nav_send) {
+//
+//        }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
+
+        switch(item.getItemId()){
+            case R.id.all_note:{
+                Intent intent=new Intent(this,FolderActivity.class);
+                startActivity(intent);
+                break;
+            }
+        }
+
         return true;
     }
 
@@ -283,7 +301,7 @@ public class MainActivity extends AppCompatActivity
         if(requestCode==NEW_NOTE){
             if(resultCode==RESULT_OK){
                 int id=data.getIntExtra("id",0);
-                int position=DBUtil.getRank(id, DBUtil.SortType.BY_MODIFIED_TIME)-1;
+                int position= NoteDBUtil.getRank(id);
                 adapter.notifyItemInserted(position);
                 recyclerView.smoothScrollToPosition(position);
                 Log.d(TAG, "onActivityResult: "+position);
@@ -292,7 +310,7 @@ public class MainActivity extends AppCompatActivity
             if(resultCode==RESULT_OK){
                 int index=data.getIntExtra("index",0);
                 int id=data.getIntExtra("id",0);
-                int position=DBUtil.getRank(id, DBUtil.SortType.BY_MODIFIED_TIME)-1;
+                int position= NoteDBUtil.getRank(id);
                 adapter.notifyItemMoved(index,position);
                 adapter.notifyItemChanged(position);
                 // TODO: 2018/8/16 用scrollToPosition没效果，找原因
@@ -305,6 +323,15 @@ public class MainActivity extends AppCompatActivity
                 Log.d(TAG, "onActivityResult: remove "+index);
             }
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        int folderId=intent.getIntExtra("folderId",-1);
+        NoteDBUtil.setsFolderId(folderId);
+        toolbar.setTitle(intent.getStringExtra("folderName"));
+        adapter.notifyDataSetChanged();
     }
 
     private void createLayoutDialog(){
@@ -354,8 +381,8 @@ public class MainActivity extends AppCompatActivity
         int position;
         for(int i=0;i<mList.size();i++){
             position=mList.get(i)-i;
-            note= DBUtil.get(position);
-            DBUtil.remove(note);
+            note= NoteDBUtil.get(position);
+            NoteDBUtil.remove(note);
             adapter.notifyItemRemoved(position);
         }
     }
