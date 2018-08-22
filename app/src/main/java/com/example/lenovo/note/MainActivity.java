@@ -1,6 +1,5 @@
 package com.example.lenovo.note;
 
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -24,6 +23,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.example.lenovo.note.db.Folder;
+import com.example.lenovo.note.db.FolderDBUtil;
 import com.example.lenovo.note.db.Note;
 import com.example.lenovo.note.db.NoteDBUtil;
 import com.example.lenovo.note.recy.MyDividerItemDecoration;
@@ -43,15 +44,16 @@ import static com.example.lenovo.note.recy.MyViewHolderFactory.GRID;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
-    public static void actionStart(Context context,int folderId,String folderName){
-        Intent intent=new Intent(context,MainActivity.class);
-        intent.putExtra("folderId",folderId);
-        intent.putExtra("folderName",folderName);
-        context.startActivity(intent);
-    }
+//    public static void actionStart(Context context,int folderId,String folderName){
+//        Intent intent=new Intent(context,MainActivity.class);
+//        intent.putExtra("folderId",folderId);
+//        intent.putExtra("folderName",folderName);
+//        context.startActivity(intent);
+//    }
 
     public static final int EDIT_NOTE=0;
     public static final int NEW_NOTE=1;
+    public static final int NOTE_FOLDER=2;
     private static final String TAG = "MainActivity";
     private final LinearLayoutManager DEFAULT_LAYOUT=new LinearLayoutManager(this);
     private final StaggeredGridLayoutManager GRID_LAYOUT=new StaggeredGridLayoutManager(2,
@@ -65,6 +67,7 @@ public class MainActivity extends AppCompatActivity
     private AlertDialog layoutDialog;
     private RecyclerView recyclerView;
     private String[] layoutItems={"默认布局","网格布局"};
+    private int currentFolderId=-1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -244,29 +247,13 @@ public class MainActivity extends AppCompatActivity
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-//        int id = item.getItemId();
-//
-//        if (id == R.id.nav_camera) {
-//            // Handle the camera action
-//        } else if (id == R.id.nav_gallery) {
-//
-//        } else if (id == R.id.nav_slideshow) {
-//
-//        } else if (id == R.id.nav_manage) {
-//
-//        } else if (id == R.id.nav_share) {
-//
-//        } else if (id == R.id.nav_send) {
-//
-//        }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
 
         switch(item.getItemId()){
             case R.id.all_note:{
                 Intent intent=new Intent(this,FolderActivity.class);
-                startActivity(intent);
+                startActivityForResult(intent,NOTE_FOLDER);
                 break;
             }
         }
@@ -322,17 +309,34 @@ public class MainActivity extends AppCompatActivity
                 adapter.notifyItemRemoved(index);
                 Log.d(TAG, "onActivityResult: remove "+index);
             }
+        }else if(requestCode==NOTE_FOLDER){
+            if(resultCode==RESULT_CANCELED){
+                // 判断便签夹是否已经被删除了
+                Folder folder= FolderDBUtil.findByFolderId(currentFolderId);
+                if(folder==null){   // 被删除，切换到全部便签
+                    currentFolderId=-1;
+                    toolbar.setTitle("全部标签");
+                }
+                NoteDBUtil.setsFolderId(currentFolderId);
+                // 没被删除也有可能被清空了，要更新数据
+                adapter.notifyDataSetChanged();
+            }else if(resultCode==RESULT_OK){
+                currentFolderId=data.getIntExtra("folderId",-1);
+                NoteDBUtil.setsFolderId(currentFolderId);
+                toolbar.setTitle(data.getStringExtra("folderName"));
+                adapter.notifyDataSetChanged();
+            }
         }
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        int folderId=intent.getIntExtra("folderId",-1);
-        NoteDBUtil.setsFolderId(folderId);
-        toolbar.setTitle(intent.getStringExtra("folderName"));
-        adapter.notifyDataSetChanged();
-    }
+//    @Override
+//    protected void onNewIntent(Intent intent) {
+//        super.onNewIntent(intent);
+//        int folderId=intent.getIntExtra("folderId",-1);
+//        NoteDBUtil.setsFolderId(folderId);
+//        toolbar.setTitle(intent.getStringExtra("folderName"));
+//        adapter.notifyDataSetChanged();
+//    }
 
     private void createLayoutDialog(){
 //        Toast.makeText(this, "create layoutdialog", Toast.LENGTH_SHORT).show();

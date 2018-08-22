@@ -5,20 +5,8 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
-    <android.support.design.widget.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:counterEnabled="true"
-        app:counterMaxLength="32">
-        <EditText
-            android:id="@+id/edit_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="16dp"
-            android:layout_marginRight="16dp"
-            android:lines="1"
-            ></EditText>
-    </android.support.design.widget.TextInputLayout>
+
+    <include layout="@layout/folder_name_edit"></include>
 
     <LinearLayout
         android:orientation="horizontal"

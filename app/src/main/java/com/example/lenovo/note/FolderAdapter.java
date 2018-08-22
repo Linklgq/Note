@@ -8,7 +8,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.lenovo.note.db.FolderDBUtil;
 
@@ -17,9 +16,12 @@ import com.example.lenovo.note.db.FolderDBUtil;
  */
 
 public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder> {
-    public interface ItemOnClickListener{
+    public interface OnItemClickListener {
         void onClick(int position);
-        boolean onLongClick(int position);
+    }
+
+    public interface OnMenuItemClickListener{
+        boolean onMenuItemClick(MenuItem item,int position);
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder{
@@ -34,11 +36,15 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
     }
 
     private MenuInflater menuInflater;
-    private ItemOnClickListener itemOnClickListener;
+    private OnItemClickListener onItemClickListener;
+    private OnMenuItemClickListener onMenuItemClickListener;
 
-    public FolderAdapter(MenuInflater menuInflater, ItemOnClickListener itemOnClickListener) {
+    public FolderAdapter(MenuInflater menuInflater,
+                         OnItemClickListener onItemClickListener,
+                         OnMenuItemClickListener onMenuItemClickListener) {
         this.menuInflater = menuInflater;
-        this.itemOnClickListener = itemOnClickListener;
+        this.onItemClickListener = onItemClickListener;
+        this.onMenuItemClickListener = onMenuItemClickListener;
     }
 
     @Override
@@ -49,8 +55,8 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(itemOnClickListener!=null){
-                    itemOnClickListener.onClick(holder.getAdapterPosition());
+                if(onItemClickListener !=null){
+                    onItemClickListener.onClick(holder.getAdapterPosition());
                 }
             }
         });
@@ -60,22 +66,8 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
         popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-                switch(item.getItemId()){
-                    case R.id.clear:{
-                        Toast.makeText(MyApplication.getContext(), "clear",
-                                Toast.LENGTH_SHORT).show();
-                        break;
-                    }
-                    case R.id.remove:{
-                        Toast.makeText(MyApplication.getContext(), "remove",
-                                Toast.LENGTH_SHORT).show();
-                        break;
-                    }
-                    case R.id.rename:{
-                        Toast.makeText(MyApplication.getContext(), "rename",
-                                Toast.LENGTH_SHORT).show();
-                        break;
-                    }
+                if(onMenuItemClickListener!=null){
+                    return onMenuItemClickListener.onMenuItemClick(item,holder.getAdapterPosition());
                 }
                 return true;
             }

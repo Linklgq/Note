@@ -10,6 +10,8 @@ import java.util.List;
  */
 
 public class FolderDBUtil {
+    public static final int NAME_MAX_LENGTH=32;
+
     private static final List<Folder> folderList=new ArrayList<>();
     private static final List<Integer> countList=new ArrayList<>();
 
@@ -35,7 +37,7 @@ public class FolderDBUtil {
             int size=folderCount();
             for(int i=0;i<size;i++){
                 countList.add(DataSupport
-                        .where("folderId = ?",String.valueOf(folderList.get(i).getId()))
+                        .where("folderId = ?",String.valueOf(get(i).getId()))
                         .count(NoteFolder.class));
             }
         }
@@ -52,9 +54,42 @@ public class FolderDBUtil {
         clearCache();
     }
 
-    public static void remove(Folder folder){
-        folder.save();
+    public static void remove(int position){
+        Folder folder=get(position);
+        clearNotes(position);
+        folder.delete();
         // FIXME: 2018/8/20 性能?
+        clearCache();
+    }
+
+    public static boolean update(int position,String newName){
+        Folder folder=get(position);
+        // 同名检查
+        int count=DataSupport.where("id <> ? and folderName = ?",
+                String.valueOf(folder.getId()),newName)
+                .count(Folder.class);
+        if(count>0){
+            return false;
+        }
+        folder.setFolderName(newName);
+        folder.save();
+        folderList.clear();
+        return true;
+    }
+
+    public static void clearNotes(int position){
+        int folderId=get(position).getId();
+//        DataSupport.deleteAll(Note.class,
+//                "id in (select noteId from NoteFolder where folderId = ?)",
+//                String.valueOf(folderId));
+//        DataSupport.deleteAll(NoteFolder.class,
+//                "folderId = ?",String.valueOf(folderId));
+        // 不仅要删除便签以及便签的目录项，还要删除便签附带的图片
+        // 所以先查询，再逐个删除
+        List<Note> notes=NoteDBUtil.query(folderId);
+        for(Note note:notes){
+            NoteDBUtil.remove(note);
+        }
         clearCache();
     }
 
@@ -71,5 +106,19 @@ public class FolderDBUtil {
             }
         }
         return folderList.size();
+    }
+
+    public static int getRank(int id){
+        int rank=0;
+        rank=DataSupport
+                .where("folderName < (select folderName from Folder where id = ?)",
+                        String.valueOf(id))
+                .count(Folder.class);
+        return rank;
+    }
+
+    public static Folder findByFolderId(int id){
+        Folder result=DataSupport.find(Folder.class,id);
+        return result;
     }
 }

@@ -1,10 +1,13 @@
 package com.example.lenovo.note;
 
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -14,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.lenovo.note.db.Folder;
 import com.example.lenovo.note.db.FolderDBUtil;
@@ -24,6 +28,8 @@ public class FolderActivity extends AppCompatActivity {
     private static final String TAG = "FolderActivity";
 
     private View allNotes;
+    private TextView notesCount;
+    private RecyclerView recyclerView;
     private AlertDialog addFolderDialog;
     private FolderAdapter adapter;
 
@@ -35,28 +41,32 @@ public class FolderActivity extends AppCompatActivity {
         // FIXME: 2018/8/21
         FolderDBUtil.clearCache();
 
-        Toolbar toolbar= (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        ActionBar actionBar=getSupportActionBar();
+        ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
 
-        TextView notesCount= (TextView) findViewById(R.id.all_file_count);
+        notesCount = (TextView) findViewById(R.id.all_file_count);
         notesCount.setText(String.valueOf(FolderDBUtil.totalNotes()));
-        allNotes=findViewById(R.id.all_note);
+        allNotes = findViewById(R.id.all_note);
         allNotes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                MainActivity.actionStart(FolderActivity.this,-1,"全部便签");
+                Intent intent=new Intent();
+                intent.putExtra("folderId",-1);
+                intent.putExtra("folderName","全部便签");
+                setResult(RESULT_OK,intent);
+                finish();
             }
         });
 
         initRecyclerView();
 
-        FloatingActionButton fab= (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(addFolderDialog==null){
+                if (addFolderDialog == null) {
                     initAddFolderDialog();
                 }
                 addFolderDialog.show();
@@ -66,35 +76,44 @@ public class FolderActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch(item.getItemId()){
-            case android.R.id.home:{
-                finish();
+        switch (item.getItemId()) {
+            case android.R.id.home: {
+                onBackPressed();
                 break;
             }
         }
         return true;
     }
 
-    private void initAddFolderDialog(){
-        addFolderDialog=new AlertDialog.Builder(this)
+    @Override
+    public void onBackPressed() {
+        setResult(RESULT_CANCELED);
+        Log.d(TAG, "onBackPressed: ");
+        super.onBackPressed();
+    }
+
+    private void initAddFolderDialog() {
+        addFolderDialog = new AlertDialog.Builder(this)
                 .setTitle("新建便签夹")
                 .setView(R.layout.edit_dialog)
                 .show();
 
-        final EditText editText= (EditText) (addFolderDialog.getWindow().findViewById(R.id.edit_text));
+        final EditText editText = (EditText) (addFolderDialog.getWindow().findViewById(R.id.edit_text));
         editText.setSingleLine();
-        TextView ok= (TextView) (addFolderDialog.getWindow().findViewById(R.id.action_ok));
-        TextView cancel= (TextView)( addFolderDialog.getWindow().findViewById(R.id.action_cancel));
+        TextView ok = (TextView) (addFolderDialog.getWindow().findViewById(R.id.action_ok));
+        TextView cancel = (TextView) (addFolderDialog.getWindow().findViewById(R.id.action_cancel));
         ok.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String folderName= NoteAnalUtil.trimWhiteChar(editText.getText().toString());
-                Log.d(TAG, "onClick: "+folderName);
-                Folder folder=new Folder();
+                String folderName = NoteAnalUtil.trimWhiteChar(editText.getText().toString());
+                Log.d(TAG, "onClick: " + folderName);
+                Folder folder = new Folder();
                 folder.setFolderName(folderName);
                 FolderDBUtil.add(folder);
-                // FIXME: 2018/8/20 改为局部刷新
-                adapter.notifyDataSetChanged();
+                int position=FolderDBUtil.getRank(folder.getId());
+                adapter.notifyItemInserted(position);
+                recyclerView.smoothScrollToPosition(position);
+                Log.d(TAG, "onClick: insert "+position);
                 editText.setText("");
                 addFolderDialog.dismiss();
             }
@@ -108,28 +127,138 @@ public class FolderActivity extends AppCompatActivity {
         });
     }
 
-    private void initRecyclerView(){
-        RecyclerView recyclerView= (RecyclerView) findViewById(R.id.folder_list);
-        adapter=new FolderAdapter(getMenuInflater(),new FolderAdapter.ItemOnClickListener() {
-            @Override
-            public void onClick(int position) {
-                Folder folder=FolderDBUtil.get(position);
-                MainActivity.actionStart(FolderActivity.this,
-                        folder.getId(),folder.getFolderName());
-            }
+    private void initRecyclerView() {
+        recyclerView = (RecyclerView) findViewById(R.id.folder_list);
 
-            @Override
-            public boolean onLongClick(int position) {
-                return true;
-            }
-        });
+        DefaultItemAnimator itemAnimator=new DefaultItemAnimator();
+        recyclerView.setItemAnimator(itemAnimator);
+
+        adapter = new FolderAdapter(getMenuInflater(),
+                new FolderAdapter.OnItemClickListener() {
+                    @Override
+                    public void onClick(int position) {
+                        Folder folder = FolderDBUtil.get(position);
+                        Intent intent=new Intent();
+                        intent.putExtra("folderId",folder.getId());
+                        intent.putExtra("folderName",folder.getFolderName());
+                        setResult(RESULT_OK,intent);
+                        finish();
+                    }
+                },
+                new FolderAdapter.OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item, int position) {
+                        switch (item.getItemId()) {
+                            case R.id.clear: {
+                                showClearNoteDialog(position);
+                                break;
+                            }
+                            case R.id.remove: {
+                                showRemoveFolderDialog(position);
+                                break;
+                            }
+                            case R.id.rename: {
+                                showRenameDialog(position);
+                                break;
+                            }
+                        }
+                        return true;
+                    }
+                });
         recyclerView.setAdapter(adapter);
 
-        LinearLayoutManager layoutManager=new LinearLayoutManager(this);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
 
-        MyDividerItemDecoration divider=new MyDividerItemDecoration(this,
+        MyDividerItemDecoration divider = new MyDividerItemDecoration(this,
                 DividerItemDecoration.HORIZONTAL);
         recyclerView.addItemDecoration(divider);
+    }
+
+    private void showClearNoteDialog(final int position){
+        new AlertDialog.Builder(this)
+                .setTitle("清空便签")
+                .setMessage("删除该便签夹下的所有便签。确定继续？")
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        FolderDBUtil.clearNotes(position);
+                        adapter.notifyItemChanged(position);
+                        notesCount.setText(String.valueOf(FolderDBUtil.totalNotes()));
+                        Log.d(TAG, "onClick: clear "+position);
+                    }
+                })
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Toast.makeText(FolderActivity.this, position+" cancel",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
+    }
+
+    private void showRemoveFolderDialog(final int position){
+        new AlertDialog.Builder(this)
+                .setTitle("删除便签夹")
+                .setMessage("删除便签夹以及便签夹下的所有便签。确定继续？")
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        FolderDBUtil.remove(position);
+                        adapter.notifyItemRemoved(position);
+                        notesCount.setText(String.valueOf(FolderDBUtil.totalNotes()));
+                        Log.d(TAG, "onClick: remove "+position);
+                    }
+                })
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Toast.makeText(FolderActivity.this, position+" cancel",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
+    }
+
+    private void showRenameDialog(final int position){
+        final AlertDialog renameDialog=new AlertDialog.Builder(this)
+                .setTitle("重命名")
+                .setView(R.layout.edit_dialog)
+                .show();
+        final EditText editText = (EditText) (renameDialog.getWindow().findViewById(R.id.edit_text));
+        editText.setSingleLine();
+        editText.setText(FolderDBUtil.get(position).getFolderName());
+        TextView ok = (TextView) (renameDialog.getWindow().findViewById(R.id.action_ok));
+        TextView cancel = (TextView) (renameDialog.getWindow().findViewById(R.id.action_cancel));
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String text=editText.getText().toString();
+                if(text.length()>FolderDBUtil.NAME_MAX_LENGTH){
+                    editText.setError("超出限定长度");
+                    return;
+                }
+                String folderName = NoteAnalUtil.trimWhiteChar(text);
+                int folderId=FolderDBUtil.get(position).getId();
+                if(FolderDBUtil.update(position,folderName)){
+                    int nP=FolderDBUtil.getRank(folderId);
+                    Log.d(TAG, "onClick: 修改名字成功 "+nP);
+                    adapter.notifyItemMoved(position,nP);
+                    adapter.notifyItemChanged(nP);
+                    recyclerView.smoothScrollToPosition(nP);
+                    renameDialog.dismiss();
+                }else{
+                    Log.d(TAG, "onClick: 同名");
+                    editText.setError("已存在相同的便签夹");
+                }
+            }
+        });
+        cancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                renameDialog.dismiss();
+            }
+        });
     }
 }

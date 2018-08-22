@@ -57,7 +57,7 @@ public class NoteDBUtil {
 
     public static Note get(int position){
         if(sNoteList==null){
-            query();
+            sNoteList=query(sFolderId);
         }
         return sNoteList.get(position);
     }
@@ -91,18 +91,19 @@ public class NoteDBUtil {
 
     public static void remove(Note note){
         NoteAnalUtil.rmText(note.getContent());
-        List<NoteFolder> result=DataSupport.where("noteId = ?",String.valueOf(note.getId()))
-                .find(NoteFolder.class);
-        for(NoteFolder noteFolder:result){
-            noteFolder.delete();
-        }
+//        List<NoteFolder> result=DataSupport.where("noteId = ?",String.valueOf(note.getId()))
+//                .find(NoteFolder.class);
+//        for(NoteFolder noteFolder:result){
+//            noteFolder.delete();
+//        }
+        DataSupport.deleteAll(NoteFolder.class,"noteId = ?",String.valueOf(note.getId()));
         note.delete();
         sNoteList=null;
     }
 
     public static int count(){
         if(sNoteList==null){
-            query();
+            sNoteList=query(sFolderId);
         }
         return sNoteList.size();
     }
@@ -124,24 +125,20 @@ public class NoteDBUtil {
     }
 
     public static void setsFolderId(int sFolderId) {
-        if(NoteDBUtil.sFolderId != sFolderId) {
-            NoteDBUtil.sFolderId = sFolderId;
-            sNoteList=null;
-        }
+        NoteDBUtil.sFolderId = sFolderId;
+        sNoteList=null;
     }
 
-    private static void query(){
-        if(sFolderId<0) {
-            sNoteList = DataSupport.order(sOrder.by()).find(Note.class);
+    public static List<Note> query(int folderId){
+        if(folderId<0) {
+            return DataSupport.order(sOrder.by()).find(Note.class);
         }else{
-            sNoteList=DataSupport
+            return DataSupport
                     .where("id in (select noteId from NoteFolder where folderId = ?)",
                             String.valueOf(sFolderId))
                     .order(sOrder.by())
                     .find(Note.class);
 
         }
-
-        Log.d(TAG, "query: "+sNoteList.size());
     }
 }
