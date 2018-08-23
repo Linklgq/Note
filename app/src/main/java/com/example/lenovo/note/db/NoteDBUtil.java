@@ -135,7 +135,7 @@ public class NoteDBUtil {
         }else{
             return DataSupport
                     .where("id in (select noteId from NoteFolder where folderId = ?)",
-                            String.valueOf(sFolderId))
+                            String.valueOf(folderId))
                     .order(sOrder.by())
                     .find(Note.class);
 

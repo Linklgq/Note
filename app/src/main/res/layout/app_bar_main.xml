@@ -15,7 +15,16 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:popupTheme="@style/AppTheme.PopupOverlay"
-            app:layout_scrollFlags="scroll|enterAlways|snap"/>
+            app:layout_scrollFlags="scroll|enterAlways|snap">
+            <android.support.v7.widget.AppCompatSpinner
+                android:id="@+id/spinner_folder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+                android:overlapAnchor="false"
+                android:spinnerMode="dropdown">
+            </android.support.v7.widget.AppCompatSpinner>
+        </android.support.v7.widget.Toolbar>
 
     </android.support.design.widget.AppBarLayout>
 

@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:text="取消"
             android:textColor="@color/colorAccent"
-            android:layout_margin="16dp"></TextView>
+            android:padding="16dp"></TextView>
 
         <TextView
             android:id="@+id/action_ok"
@@ -27,6 +27,6 @@
             android:layout_height="wrap_content"
             android:text="确定"
             android:textColor="@color/colorAccent"
-            android:layout_margin="16dp"></TextView>
+            android:padding="16dp"></TextView>
     </LinearLayout>
 </LinearLayout>

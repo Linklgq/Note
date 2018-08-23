@@ -1,5 +1,7 @@
 package com.example.lenovo.note.db;
 
+import android.util.Log;
+
 import org.litepal.crud.DataSupport;
 
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ import java.util.List;
 
 public class FolderDBUtil {
     public static final int NAME_MAX_LENGTH=32;
+
+    private static final String TAG = "FolderDBUtil";
 
     private static final List<Folder> folderList=new ArrayList<>();
     private static final List<Integer> countList=new ArrayList<>();
@@ -48,14 +52,23 @@ public class FolderDBUtil {
         return DataSupport.count(Note.class);
     }
 
-    public static void add(Folder folder){
+    public static boolean add(Folder folder){
+        int count=DataSupport.where("folderName = ?",folder.getFolderName())
+                .count(Folder.class);
+        if(count>0){
+            return false;
+        }
         folder.save();
         // FIXME: 2018/8/20 性能?
         clearCache();
+        Log.d(TAG, "add: "+folder.getId());
+        return true;
     }
 
     public static void remove(int position){
         Folder folder=get(position);
+        Log.d(TAG, "remove: id "+folder.getId());
+        Log.d(TAG, "remove: "+position);
         clearNotes(position);
         folder.delete();
         // FIXME: 2018/8/20 性能?
@@ -79,6 +92,7 @@ public class FolderDBUtil {
 
     public static void clearNotes(int position){
         int folderId=get(position).getId();
+        Log.d(TAG, "clearNotes: folderid "+folderId);
 //        DataSupport.deleteAll(Note.class,
 //                "id in (select noteId from NoteFolder where folderId = ?)",
 //                String.valueOf(folderId));
@@ -87,6 +101,7 @@ public class FolderDBUtil {
         // 不仅要删除便签以及便签的目录项，还要删除便签附带的图片
         // 所以先查询，再逐个删除
         List<Note> notes=NoteDBUtil.query(folderId);
+        Log.d(TAG, "clearNotes: "+notes.size());
         for(Note note:notes){
             NoteDBUtil.remove(note);
         }
