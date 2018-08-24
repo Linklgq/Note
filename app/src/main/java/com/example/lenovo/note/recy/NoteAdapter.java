@@ -4,6 +4,8 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 
 import com.example.lenovo.note.db.NoteDBUtil;
 
@@ -16,7 +18,8 @@ import static android.content.ContentValues.TAG;
  * Created by Lenovo on 2018/7/27.
  */
 
-public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
+public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder>
+        implements Filterable{
     static int count=0;
 
     private NoteClickListener noteClickListener;
@@ -85,6 +88,23 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder> {
     public void onViewDetachedFromWindow(MyViewHolder holder) {
         super.onViewDetachedFromWindow(holder);
         Log.d(TAG, "onViewDetachedFromWindow: ");
+    }
+
+    @Override
+    public Filter getFilter() {
+        return new Filter() {
+            @Override
+            protected FilterResults performFiltering(CharSequence charSequence) {
+                NoteDBUtil.setFilter(true,charSequence.toString());
+                NoteDBUtil.query();
+                return null;
+            }
+
+            @Override
+            protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
+                notifyDataSetChanged();
+            }
+        };
     }
 
     public void setNoteClickListener(NoteClickListener noteClickListener) {

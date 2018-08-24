@@ -7,6 +7,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.TextView;
 
 import com.example.lenovo.note.db.FolderDBUtil;
@@ -15,7 +17,8 @@ import com.example.lenovo.note.db.FolderDBUtil;
  * Created by Lenovo on 2018/8/20.
  */
 
-public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder> {
+public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder>
+        implements Filterable{
     public interface OnItemClickListener {
         void onClick(int position);
     }
@@ -91,5 +94,22 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
     @Override
     public int getItemCount() {
         return FolderDBUtil.folderCount();
+    }
+
+    @Override
+    public Filter getFilter() {
+        return new Filter() {
+            @Override
+            protected FilterResults performFiltering(CharSequence charSequence) {
+                FolderDBUtil.setFilter(true,charSequence.toString());
+                FolderDBUtil.query();
+                return null;
+            }
+
+            @Override
+            protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
+                notifyDataSetChanged();
+            }
+        };
     }
 }

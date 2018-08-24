@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
@@ -17,6 +18,7 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -73,6 +75,7 @@ public class MainActivity extends AppCompatActivity
     private int currentFolderId;
     AppCompatSpinner spinner;
     FolderSpinnerAdapter spinnerAdapter;
+    private SearchView mSearchView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,14 +93,16 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 Log.d(TAG, "onItemSelected: " + i);
-                if (i == 0) {
-                    currentFolderId = -1;
-                } else {
-                    currentFolderId = FolderDBUtil.get(i - 1).getId();
-                    Log.d(TAG, "onItemSelected: folderdb "+currentFolderId);
+                int t=-1;
+                if(i>0) {
+                    t = FolderDBUtil.get(i - 1).getId();
+                    Log.d(TAG, "onItemSelected: folderdb "+t);
                 }
-                NoteDBUtil.setsFolderId(currentFolderId);
-                adapter.notifyDataSetChanged();
+                if(t!=currentFolderId) {
+                    currentFolderId=t;
+                    NoteDBUtil.setsFolderId(currentFolderId);
+                    adapter.notifyDataSetChanged();
+                }
             }
 
             @Override
@@ -325,6 +330,22 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
+        MenuItem searchItem=menu.findItem(R.id.action_search);
+
+        mSearchView = (SearchView) MenuItemCompat.getActionView(searchItem);
+        mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                Log.d(TAG, "onQueryTextChange: " + newText);
+                adapter.getFilter().filter(newText);
+                return false;
+            }
+        });
         return true;
     }
 
@@ -371,8 +392,13 @@ public class MainActivity extends AppCompatActivity
                 Log.d(TAG, "onActivityResult: remove " + index);
             }
         } else if (requestCode == NOTE_FOLDER) {
-//            spinnerAdapter.notifyDataSetChanged();
-            spinner.setAdapter(spinnerAdapter);
+            if(actionMode!=null){
+                adapter.setSelect(false);
+                actionMode.finish();
+            }
+
+            spinnerAdapter.notifyDataSetChanged();
+//            spinner.setAdapter(spinnerAdapter);
             if (resultCode == RESULT_CANCELED) {
                 // 判断便签夹是否已经被删除了
                 Folder folder = FolderDBUtil.findByFolderId(currentFolderId);
@@ -380,9 +406,10 @@ public class MainActivity extends AppCompatActivity
                     currentFolderId = -1;
                     spinner.setSelection(0);
 //                    NoteDBUtil.setsFolderId(currentFolderId);
-                } else {     // 没被删除也有可能被清空了，更新数据
-                    adapter.notifyDataSetChanged();
                 }
+//                else {     // 没被删除也有可能被清空了，更新数据
+//                    adapter.notifyDataSetChanged();
+//                }
             } else if (resultCode == RESULT_OK) {
                 currentFolderId = data.getIntExtra("folderId", -1);
                 Log.d(TAG, "onActivityResult: folderdb "+currentFolderId);
@@ -393,6 +420,9 @@ public class MainActivity extends AppCompatActivity
                     spinner.setSelection(FolderDBUtil.getRank(currentFolderId) + 1);
                 }
             }
+
+            NoteDBUtil.setsFolderId(currentFolderId);
+            adapter.notifyDataSetChanged();
         }
     }
 

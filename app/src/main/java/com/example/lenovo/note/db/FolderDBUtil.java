@@ -1,11 +1,14 @@
 package com.example.lenovo.note.db;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.litepal.crud.DataSupport;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.litepal.crud.DataSupport.order;
 
 /**
  * Created by Lenovo on 2018/8/20.
@@ -16,17 +19,21 @@ public class FolderDBUtil {
 
     private static final String TAG = "FolderDBUtil";
 
-    private static final List<Folder> folderList=new ArrayList<>();
-    private static final List<Integer> countList=new ArrayList<>();
+    private static List<Folder> sFolderList=null;
+    private static List<Integer> sCountList=new ArrayList<>();
+
+    private static boolean sFiltering=false;
+    private static String sQueryText;
 
     public static Folder get(int position){
-        if(folderList.isEmpty()){
-            List<Folder> result= DataSupport.order("folderName").find(Folder.class);
-            for(Folder folder:result){
-                folderList.add(folder);
-            }
+        if(sFolderList==null){
+//            List<Folder> result= DataSupport.order("folderName").find(Folder.class);
+//            for(Folder folder:result){
+//                sFolderList.add(folder);
+//            }
+            query();
         }
-        return folderList.get(position);
+        return sFolderList.get(position);
     }
 
 //    /** 获取便签夹中的便签数*/
@@ -37,15 +44,15 @@ public class FolderDBUtil {
     /** 获取便签夹中的便签数*/
     public static int getNoteCount(int position){
         // FIXME: 2018/8/20 性能？
-        if(countList.isEmpty()){
+        if(sCountList.isEmpty()){
             int size=folderCount();
             for(int i=0;i<size;i++){
-                countList.add(DataSupport
+                sCountList.add(DataSupport
                         .where("folderId = ?",String.valueOf(get(i).getId()))
                         .count(NoteFolder.class));
             }
         }
-        return countList.get(position);
+        return sCountList.get(position);
     }
 
     public static int totalNotes(){
@@ -86,7 +93,7 @@ public class FolderDBUtil {
         }
         folder.setFolderName(newName);
         folder.save();
-        folderList.clear();
+        sFolderList=null;
         return true;
     }
 
@@ -109,18 +116,15 @@ public class FolderDBUtil {
     }
 
     public static void clearCache(){
-        folderList.clear();
-        countList.clear();
+        sFolderList=null;
+        sCountList.clear();
     }
 
     public static int folderCount(){
-        if(folderList.isEmpty()){
-            List<Folder> result= DataSupport.order("folderName").find(Folder.class);
-            for(Folder folder:result){
-                folderList.add(folder);
-            }
+        if(sFolderList==null){
+            query();
         }
-        return folderList.size();
+        return sFolderList.size();
     }
 
     public static int getRank(int id){
@@ -135,5 +139,24 @@ public class FolderDBUtil {
     public static Folder findByFolderId(int id){
         Folder result=DataSupport.find(Folder.class,id);
         return result;
+    }
+
+    public static void setFilter(boolean sFiltering,String sQueryText) {
+        FolderDBUtil.sFiltering = sFiltering;
+        FolderDBUtil.sQueryText = sQueryText;
+        if(sFiltering&&TextUtils.isEmpty(sQueryText)){
+            FolderDBUtil.sFiltering=false;
+        }
+        clearCache();
+    }
+
+    public static void query(){
+        if(sFiltering){
+            sFolderList=DataSupport.where("folderName like ?","%"+sQueryText+"%")
+                    .order("folderName").find(Folder.class);
+        }else{
+            sFolderList= order("folderName").find(Folder.class);
+        }
+        sCountList.clear();
     }
 }

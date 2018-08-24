@@ -1,5 +1,6 @@
 package com.example.lenovo.note.db;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.example.lenovo.note.util.NoteAnalUtil;
@@ -50,6 +51,9 @@ public class NoteDBUtil {
     }
 
     private static final String TAG = "NoteDBUtil";
+
+    private static boolean sFiltering=false;
+    private static String sQueryText;
 
     private static List<Note> sNoteList;
     private static Order sOrder=Order.BY_MODIFIED_TIME;
@@ -129,16 +133,43 @@ public class NoteDBUtil {
         sNoteList=null;
     }
 
+    public static void setFilter(boolean sFiltering,String sQueryText) {
+        NoteDBUtil.sFiltering = sFiltering;
+        NoteDBUtil.sQueryText = sQueryText;
+        if(sFiltering&& TextUtils.isEmpty(sQueryText)){
+            NoteDBUtil.sFiltering=false;
+        }
+        sNoteList=null;
+    }
+
     public static List<Note> query(int folderId){
         if(folderId<0) {
-            return DataSupport.order(sOrder.by()).find(Note.class);
+            if(sFiltering){
+                return DataSupport.where("content like ?","%"+sQueryText+"%")
+                        .order(sOrder.by()).find(Note.class);
+            }else {
+                return DataSupport.order(sOrder.by()).find(Note.class);
+            }
         }else{
-            return DataSupport
-                    .where("id in (select noteId from NoteFolder where folderId = ?)",
-                            String.valueOf(folderId))
-                    .order(sOrder.by())
-                    .find(Note.class);
+            if(sFiltering) {
+                return DataSupport
+                        .where("id in (select noteId from NoteFolder where folderId = ?)" +
+                                        " and content like ?",
+                                String.valueOf(folderId), "%" + sQueryText + "%")
+                        .order(sOrder.by())
+                        .find(Note.class);
+            }else{
+                return DataSupport
+                        .where("id in (select noteId from NoteFolder where folderId = ?)",
+                                String.valueOf(folderId))
+                        .order(sOrder.by())
+                        .find(Note.class);
+            }
 
         }
+    }
+
+    public static void query(){
+        sNoteList=query(sFolderId);
     }
 }
