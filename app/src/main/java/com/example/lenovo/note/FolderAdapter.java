@@ -78,6 +78,12 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
         holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
+                int pos=holder.getAdapterPosition();
+                if(FolderDBUtil.getNoteCount(pos)==0){
+                    popupMenu.getMenu().findItem(R.id.clear).setEnabled(false);
+                }else{
+                    popupMenu.getMenu().findItem(R.id.clear).setEnabled(true);
+                }
                 popupMenu.show();
                 return true;
             }

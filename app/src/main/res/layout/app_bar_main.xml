@@ -35,7 +35,6 @@
         android:scrollbarThumbVertical="@color/colorPrimary"
         android:scrollbars="vertical"
         android:scrollbarSize="3dp"
-        android:background="@color/grayE"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"></android.support.v7.widget.RecyclerView>
 
     <android.support.design.widget.FloatingActionButton

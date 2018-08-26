@@ -1,7 +1,6 @@
 package com.example.lenovo.note.db;
 
 import android.text.TextUtils;
-import android.util.Log;
 
 import org.litepal.crud.DataSupport;
 
@@ -25,21 +24,13 @@ public class FolderDBUtil {
     private static boolean sFiltering=false;
     private static String sQueryText;
 
+    /** 根据位置获取对应的便签夹*/
     public static Folder get(int position){
         if(sFolderList==null){
-//            List<Folder> result= DataSupport.order("folderName").find(Folder.class);
-//            for(Folder folder:result){
-//                sFolderList.add(folder);
-//            }
             query();
         }
         return sFolderList.get(position);
     }
-
-//    /** 获取便签夹中的便签数*/
-//    public static int getCount(int folderId){
-//        return DataSupport.where("folderId = ?",String.valueOf(folderId)).count(NoteFolder.class);
-//    }
 
     /** 获取便签夹中的便签数*/
     public static int getNoteCount(int position){
@@ -55,11 +46,14 @@ public class FolderDBUtil {
         return sCountList.get(position);
     }
 
+    /** 全部便签数*/
     public static int totalNotes(){
         return DataSupport.count(Note.class);
     }
 
+    /** 新建便签夹*/
     public static boolean add(Folder folder){
+        // 判断是否有重名
         int count=DataSupport.where("folderName = ?",folder.getFolderName())
                 .count(Folder.class);
         if(count>0){
@@ -68,20 +62,19 @@ public class FolderDBUtil {
         folder.save();
         // FIXME: 2018/8/20 性能?
         clearCache();
-        Log.d(TAG, "add: "+folder.getId());
         return true;
     }
 
+    /** 删除便签夹以及便签夹下的所有便签*/
     public static void remove(int position){
         Folder folder=get(position);
-        Log.d(TAG, "remove: id "+folder.getId());
-        Log.d(TAG, "remove: "+position);
         clearNotes(position);
         folder.delete();
         // FIXME: 2018/8/20 性能?
         clearCache();
     }
 
+    /** 修改便签夹名字*/
     public static boolean update(int position,String newName){
         Folder folder=get(position);
         // 同名检查
@@ -97,29 +90,25 @@ public class FolderDBUtil {
         return true;
     }
 
+    /** 清空便签夹下的便签*/
     public static void clearNotes(int position){
         int folderId=get(position).getId();
-        Log.d(TAG, "clearNotes: folderid "+folderId);
-//        DataSupport.deleteAll(Note.class,
-//                "id in (select noteId from NoteFolder where folderId = ?)",
-//                String.valueOf(folderId));
-//        DataSupport.deleteAll(NoteFolder.class,
-//                "folderId = ?",String.valueOf(folderId));
         // 不仅要删除便签以及便签的目录项，还要删除便签附带的图片
         // 所以先查询，再逐个删除
-        List<Note> notes=NoteDBUtil.query(folderId);
-        Log.d(TAG, "clearNotes: "+notes.size());
+        List<Note> notes= NoteDBUtil.query(folderId);
         for(Note note:notes){
             NoteDBUtil.remove(note);
         }
         clearCache();
     }
 
+    /** 清空缓存*/
     public static void clearCache(){
         sFolderList=null;
         sCountList.clear();
     }
 
+    /** 便签夹个数*/
     public static int folderCount(){
         if(sFolderList==null){
             query();
@@ -127,6 +116,7 @@ public class FolderDBUtil {
         return sFolderList.size();
     }
 
+    /** 便签夹按名字排序的排名*/
     public static int getRank(int id){
         int rank=0;
         rank=DataSupport
@@ -136,11 +126,13 @@ public class FolderDBUtil {
         return rank;
     }
 
+    /** 通过便签夹id查询便签夹*/
     public static Folder findByFolderId(int id){
         Folder result=DataSupport.find(Folder.class,id);
         return result;
     }
 
+    /** 设置查询过滤*/
     public static void setFilter(boolean sFiltering,String sQueryText) {
         FolderDBUtil.sFiltering = sFiltering;
         FolderDBUtil.sQueryText = sQueryText;
@@ -150,6 +142,7 @@ public class FolderDBUtil {
         clearCache();
     }
 
+    /** 查询，更新缓存*/
     public static void query(){
         if(sFiltering){
             sFolderList=DataSupport.where("folderName like ?","%"+sQueryText+"%")

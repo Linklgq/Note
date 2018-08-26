@@ -336,13 +336,13 @@ public class NoteEditActivity extends AppCompatActivity {
         
         if(index<0){    // 添加便签
             Intent intent=new Intent();
-            intent.putExtra("id",note.getId());
             boolean result;
             if(haveSave){
                 result=NoteDBUtil.update(note);
             }else{
                 result=NoteDBUtil.add(note);
             }
+            intent.putExtra("id",note.getId());
             if(result){
                 setResult(RESULT_OK,intent);
             }else{
@@ -356,9 +356,9 @@ public class NoteEditActivity extends AppCompatActivity {
             }
         }else{          // 修改便签
             Intent intent=new Intent();
-            intent.putExtra("id",note.getId());
             intent.putExtra("index",index);
             if(NoteDBUtil.update(note)){
+                intent.putExtra("id",note.getId());
                 setResult(RESULT_OK,intent);
             }else{
                 NoteDBUtil.remove(note);
@@ -413,6 +413,31 @@ public class NoteEditActivity extends AppCompatActivity {
         editor =(EditText)findViewById(R.id.note_edit);
         editor.setCursorVisible(false);
         editor.setText(note.getContent());
+
+        // FIXME: 2018/8/26 剪切复制时图片的处理暂时还没想好，先禁止剪切复制
+        editor.setCustomSelectionActionModeCallback(new android.view.ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(android.view.ActionMode actionMode, Menu menu) {
+                menu.findItem(android.R.id.cut).setVisible(false);
+                menu.findItem(android.R.id.copy).setVisible(false);
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(android.view.ActionMode actionMode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(android.view.ActionMode actionMode, MenuItem menuItem) {
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(android.view.ActionMode actionMode) {
+
+            }
+        });
 
         // TODO: 2018/8/8 复制粘贴
         // FIXME: 2018/8/18 加载时也会触发

@@ -67,7 +67,6 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder>
 
     @Override
     public int getItemViewType(int position) {
-        // TODO: 2018/7/27 多种布局
         return layoutType;
     }
 

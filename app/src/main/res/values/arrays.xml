@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_items">
+        <item>@string/layout_linear</item>
+        <item>@string/layout_grid</item>
+    </string-array>
+
+    <string-array name="order_items">
+        <item>@string/by_modified_time</item>
+        <item>@string/by_created_time</item>
+        <item>@string/by_content</item>
+    </string-array>
+</resources>

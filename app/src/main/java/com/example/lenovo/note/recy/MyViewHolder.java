@@ -24,7 +24,7 @@ public abstract class MyViewHolder extends RecyclerView.ViewHolder {
 //            itemView.setBackgroundColor(MyApplication.getContext()
 //                    .getResources().getColor(R.color.grayA));
             itemView.setBackgroundColor(ContextCompat
-                    .getColor(MyApplication.getContext(),R.color.grayA));
+                    .getColor(MyApplication.getContext(), R.color.grayC));
         }else{
 //            itemView.setBackgroundColor(MyApplication.getContext()
 //                    .getResources().getColor(R.color.white));

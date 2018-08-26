@@ -35,11 +35,13 @@ public class MyViewHolderFactory {
     public static MyViewHolder getType(ViewGroup parent, int viewType) {
         switch (viewType) {
             case DEFAULT: {
+                Log.d(TAG, "getType: default");
                 View view = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.note_item_default, parent, false);
                 return new DefaultViewHolder(view);
             }
             case GRID: {
+                Log.d(TAG, "getType: grid");
                 View view = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.note_item_grid, parent, false);
                 return new GridViewHolder(view);
@@ -161,7 +163,8 @@ public class MyViewHolderFactory {
         public void bind(int position, final boolean scroll, int w) {
             Log.d(TAG, "bind: " + count);
             long time1=System.currentTimeMillis();
-            width = (w - 144) / 2;
+            // FIXME: 2018/8/24 精准宽度
+            width = (w - 180) / 2;
             if (width <= 0) {
                 return;
             }

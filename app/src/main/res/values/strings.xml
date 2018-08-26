@@ -7,6 +7,14 @@
 
     <string name="action_settings">Settings</string>
     <string name="title_activity_folder">FolderActivity</string>
+
+    <string name="layout_linear">线性布局</string>
+    <string name="layout_grid">网格布局</string>
+
+    <string name="by_created_time">按创建时间</string>
+    <string name="by_modified_time">按修改时间</string>
+    <string name="by_content">按内容</string>
+
     <string name="large_text">
         "Material is the metaphor.\n\n"
 

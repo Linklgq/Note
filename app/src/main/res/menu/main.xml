@@ -9,6 +9,11 @@
         app:showAsAction="always|collapseActionView"></item>
 
     <item
+        android:id="@+id/action_order"
+        android:title="排序"
+        app:showAsAction="never"></item>
+
+    <item
         android:id="@+id/action_layout"
         android:title="布局"
         app:showAsAction="never"></item>

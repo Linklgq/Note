@@ -65,9 +65,9 @@ public class NoteAnalUtil {
         return null;
     }
 
+    /** 匹配图片*/
     public static void contentAnalyze(CharSequence text,
                                            MatchPictureListener matchPictureListener) {
-//        Spannable spannable = new SpannableString(text);
         Matcher matcher = Pattern.compile(PIC_TAG).matcher(text);
         while (matcher.find()) {
             if (matchPictureListener != null && matchPictureListener.cancel()) {
@@ -75,18 +75,6 @@ public class NoteAnalUtil {
             }
             Matcher m = Pattern.compile(PIC_NAME).matcher(matcher.group());
             if (m.find()) {
-//                Bitmap bitmap;
-//                if (matchPictureListener == null || matchPictureListener.customBitmap() == null) {
-//                    long time1=System.currentTimeMillis();
-//                    bitmap = BitmapUtil.load(m.group());
-//                    long time2=System.currentTimeMillis();
-//                    Log.d(TAG, "contentAnalyze: "+(time2-time1)+"ms");
-//                } else {
-//                    bitmap = matchPictureListener.customBitmap();
-//                }
-//                ImageSpan imageSpan = new ImageSpan(context, bitmap);
-//                spannable.setSpan(imageSpan, matcher.start(), matcher.end(),
-//                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 if (matchPictureListener != null) {
                     matchPictureListener.match(m.group(), matcher.start(), matcher.end());
                 }
@@ -94,6 +82,7 @@ public class NoteAnalUtil {
         }
     }
 
+    /** 获取段落*/
     public static String paragraph(String text, int index) {
         String str;
         String[] array = text.split("\n", index + 2);
@@ -106,6 +95,7 @@ public class NoteAnalUtil {
         return str;
     }
 
+    /** 删除文本首尾的空白字符，包括且不限于空格*/
     @NonNull
     public static String trimWhiteChar(String str) {
         int i,j;
@@ -122,6 +112,7 @@ public class NoteAnalUtil {
         return str.substring(i,j+1);
     }
 
+    /** 删除文本中的图片对应的图片文件*/
     public static void rmText(CharSequence charSequence) {
         Context context= MyApplication.getContext();
         Matcher matcher = Pattern.compile(PIC_TAG).matcher(charSequence);
@@ -131,7 +122,6 @@ public class NoteAnalUtil {
             if (m.find()) {
                 // FIXME: 2018/8/16 当图片还正在保存？
                 context.deleteFile(m.group());
-//                Toast.makeText(context, "删除图片", Toast.LENGTH_SHORT).show();
             }
         }
     }

@@ -22,7 +22,6 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.lenovo.note.db.Folder;
 import com.example.lenovo.note.db.FolderDBUtil;
@@ -118,11 +117,6 @@ public class FolderActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case android.R.id.home: {
                 onBackPressed();
-                break;
-            }
-            case R.id.search: {
-//                getSupportActionBar().setDisplayShowTitleEnabled(false);
-//                mSearchView.setIconified(false);
                 break;
             }
         }
@@ -255,13 +249,7 @@ public class FolderActivity extends AppCompatActivity {
                         Log.d(TAG, "onClick: clear " + position);
                     }
                 })
-                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        Toast.makeText(FolderActivity.this, position + " cancel",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
+                .setNegativeButton("取消", null)
                 .show();
     }
 
@@ -278,13 +266,7 @@ public class FolderActivity extends AppCompatActivity {
                         Log.d(TAG, "onClick: remove " + position);
                     }
                 })
-                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        Toast.makeText(FolderActivity.this, position + " cancel",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
+                .setNegativeButton("取消", null)
                 .show();
     }
 

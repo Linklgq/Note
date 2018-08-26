@@ -3,15 +3,19 @@ package com.example.lenovo.note;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.AppCompatDelegate;
 import android.support.v7.view.ActionMode;
 import android.support.v7.widget.AppCompatSpinner;
 import android.support.v7.widget.DefaultItemAnimator;
@@ -26,12 +30,15 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 
 import com.example.lenovo.note.db.Folder;
 import com.example.lenovo.note.db.FolderDBUtil;
 import com.example.lenovo.note.db.Note;
 import com.example.lenovo.note.db.NoteDBUtil;
+import com.example.lenovo.note.db.Order;
 import com.example.lenovo.note.recy.MyDividerItemDecoration;
 import com.example.lenovo.note.recy.MyViewHolder;
 import com.example.lenovo.note.recy.MyViewHolderFactory;
@@ -49,29 +56,38 @@ import static com.example.lenovo.note.recy.MyViewHolderFactory.GRID;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
-//    public static void actionStart(Context context,int folderId,String folderName){
-//        Intent intent=new Intent(context,MainActivity.class);
-//        intent.putExtra("folderId",folderId);
-//        intent.putExtra("folderName",folderName);
-//        context.startActivity(intent);
-//    }
+    static{
+        AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
+    }
 
     public static final int EDIT_NOTE = 0;
     public static final int NEW_NOTE = 1;
     public static final int NOTE_FOLDER = 2;
+
     private static final String TAG = "MainActivity";
+
     private final LinearLayoutManager DEFAULT_LAYOUT = new LinearLayoutManager(this);
     private final StaggeredGridLayoutManager GRID_LAYOUT = new StaggeredGridLayoutManager(2,
             StaggeredGridLayoutManager.VERTICAL);
+
     private int layoutType;
+    private Order orderType;
+
     private NoteAdapter adapter;
     private Toolbar toolbar;
     private ActionBarDrawerToggle toggle;
     private ActionMode actionMode;
     private FloatingActionButton fab;
     private AlertDialog layoutDialog;
+    private AlertDialog orderDialog;
     private RecyclerView recyclerView;
-    private String[] layoutItems = {"默认布局", "网格布局"};
+    private String[] layoutItems;
+    private String layoutLinear;
+    private String layoutGrid;
+    private String[] orderItems;
+    private String byCreateTime;
+    private String byModifiedTime;
+    private String byContent;
     private int currentFolderId;
     AppCompatSpinner spinner;
     FolderSpinnerAdapter spinnerAdapter;
@@ -81,6 +97,15 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Resources res=getResources();
+        layoutItems=res.getStringArray(R.array.layout_items);
+        layoutLinear=res.getString(R.string.layout_linear);
+        layoutGrid=res.getString(R.string.layout_grid);
+        orderItems=res.getStringArray(R.array.order_items);
+        byCreateTime=res.getString(R.string.by_created_time);
+        byModifiedTime=res.getString(R.string.by_modified_time);
+        byContent=res.getString(R.string.by_content);
 
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -102,6 +127,9 @@ public class MainActivity extends AppCompatActivity
                     currentFolderId=t;
                     NoteDBUtil.setsFolderId(currentFolderId);
                     adapter.notifyDataSetChanged();
+                    updateRecyBg();
+
+                    AnimationUtil.animateIn(fab,AnimationUtil.INTERPOLATOR,null);
                 }
             }
 
@@ -111,8 +139,9 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        SharedPreferences pref = getPreferences(MODE_PRIVATE);
-        currentFolderId = pref.getInt("folderId", -1);
+        loadPrefs();
+        NoteDBUtil.setsOrder(orderType);
+
         if (currentFolderId < 0) {
             spinner.setSelection(0);
         } else {
@@ -123,7 +152,6 @@ public class MainActivity extends AppCompatActivity
             } else {
                 spinner.setSelection(FolderDBUtil.getRank(currentFolderId) + 1);
             }
-            Log.d(TAG, "onCreate: 便签夹");
         }
         NoteDBUtil.setsFolderId(currentFolderId);
 
@@ -152,6 +180,7 @@ public class MainActivity extends AppCompatActivity
                 setSelect(true);
                 MenuInflater inflater = mode.getMenuInflater();
                 inflater.inflate(R.menu.select_main, menu);
+                setStatusBarColor(getResources().getColor(R.color.gray3));
                 return true;
             }
 
@@ -184,13 +213,15 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void onDestroyActionMode(ActionMode mode) {
-                if (!done) {
-//                    adapter.notifyDataSetChanged();
+                if(done){
+                    updateRecyBg();
+                }else{
                     Set<Integer> set = adapter.getSelectedSet();
                     for (int i : set) {
                         adapter.notifyItemChanged(i);
                     }
                 }
+                setStatusBarColor(getResources().getColor(R.color.colorPrimaryDark));
                 setSelect(false);
                 actionMode = null;
                 done = false;
@@ -198,9 +229,11 @@ public class MainActivity extends AppCompatActivity
         };
 
         recyclerView = (RecyclerView) findViewById(R.id.content_main);
-        recyclerView.setLayoutManager(DEFAULT_LAYOUT);
-        recyclerView.setPadding(0, 8, 0, 8);
+
+        updateRecyLayout();
+
         adapter = new NoteAdapter();
+        adapter.setLayoutType(layoutType);
         adapter.setNoteClickListener(new NoteClickListener() {
             @Override
             public void onClick(MyViewHolder holder) {
@@ -243,9 +276,8 @@ public class MainActivity extends AppCompatActivity
                 super.onScrollStateChanged(recyclerView, newState);
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                     adapter.setScroll(false);
-                    long time1 = System.currentTimeMillis();
 
-                    if (layoutType == GRID) {
+                    if (layoutType == MyViewHolderFactory.GRID) {
                         recyclerView.post(new Runnable() {
                             @Override
                             public void run() {
@@ -265,8 +297,6 @@ public class MainActivity extends AppCompatActivity
                             }
                         });
                     }
-                    long time2 = System.currentTimeMillis();
-                    Log.d(TAG, "onScrollStateChanged: " + (time2 - time1) + "ms");
                 } else {
                     adapter.setScroll(true);
                 }
@@ -276,7 +306,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 adapter.setWidth(recyclerView.getWidth());
-//                adapter.notifyDataSetChanged();
+                if(layoutType==MyViewHolderFactory.GRID){
+                    adapter.notifyDataSetChanged();
+                }
             }
         });
         MyDividerItemDecoration divider = new MyDividerItemDecoration(this,
@@ -285,6 +317,8 @@ public class MainActivity extends AppCompatActivity
 
         DefaultItemAnimator itemAnimator = new DefaultItemAnimator();
         recyclerView.setItemAnimator(itemAnimator);
+
+        updateRecyBg();
     }
 
     @Override
@@ -293,10 +327,7 @@ public class MainActivity extends AppCompatActivity
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
-            SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
-            editor.putInt("folderId", currentFolderId);
-            editor.apply();
-            Log.d(TAG, "onSaveInstanceState: " + currentFolderId);
+            savePrefs();
             super.onBackPressed();
         }
     }
@@ -304,10 +335,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
-        editor.putInt("folderId", currentFolderId);
-        editor.apply();
-        Log.d(TAG, "onSaveInstanceState: " + currentFolderId);
+        savePrefs();
     }
 
     @SuppressWarnings("StatementWithEmptyBody")
@@ -341,7 +369,6 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                Log.d(TAG, "onQueryTextChange: " + newText);
                 adapter.getFilter().filter(newText);
                 return false;
             }
@@ -354,9 +381,16 @@ public class MainActivity extends AppCompatActivity
         switch (item.getItemId()) {
             case R.id.action_layout: {
                 if (layoutDialog == null) {
-                    createLayoutDialog();
+                    initLayoutDialog();
                 }
                 layoutDialog.show();
+                break;
+            }
+            case R.id.action_order:{
+                if(orderDialog==null){
+                    initOrderDialog();
+                }
+                orderDialog.show();
                 break;
             }
         }
@@ -365,31 +399,60 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        adapter.notifyDataSetChanged();
         // FIXME: 2018/8/16 完善
+
+        AnimationUtil.animateIn(fab,AnimationUtil.INTERPOLATOR,null);
+
         if (requestCode == NEW_NOTE) {
+            if(actionMode!=null){
+                actionMode.finish();
+            }
+
             if (resultCode == RESULT_OK) {
                 int id = data.getIntExtra("id", 0);
                 int position = NoteDBUtil.getRank(id);
                 adapter.notifyItemInserted(position);
+                updateRecyBg();
                 recyclerView.smoothScrollToPosition(position);
-                Log.d(TAG, "onActivityResult: " + position);
+            }else if(resultCode==RESULT_CANCELED){
+                Snackbar.make(recyclerView,"空便签将不会被添加",Snackbar.LENGTH_LONG)
+                        .setAction("知道了", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                Log.d(TAG, "onClick: 知道了");
+                            }
+                        })
+                        .show();
             }
         } else if (requestCode == EDIT_NOTE) {
+            if(actionMode!=null){
+                actionMode.finish();
+            }
+
             if (resultCode == RESULT_OK) {
                 int index = data.getIntExtra("index", 0);
                 int id = data.getIntExtra("id", 0);
                 int position = NoteDBUtil.getRank(id);
+                Log.d(TAG, "onActivityResult: "+position);
                 adapter.notifyItemMoved(index, position);
                 adapter.notifyItemChanged(position);
+                updateRecyBg();
                 // TODO: 2018/8/16 用scrollToPosition没效果，找原因
                 recyclerView.smoothScrollToPosition(position);
 
-                Log.d(TAG, "onActivityResult: change from " + index + " to " + position);
             } else if (resultCode == RESULT_FIRST_USER) {
                 int index = data.getIntExtra("index", 0);
                 adapter.notifyItemRemoved(index);
-                Log.d(TAG, "onActivityResult: remove " + index);
+                updateRecyBg();
+
+                Snackbar.make(recyclerView,"空便签已删除",Snackbar.LENGTH_LONG)
+                        .setAction("知道了", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                Log.d(TAG, "onClick: 知道了");
+                            }
+                        })
+                        .show();
             }
         } else if (requestCode == NOTE_FOLDER) {
             if(actionMode!=null){
@@ -405,15 +468,11 @@ public class MainActivity extends AppCompatActivity
                 if (folder == null) {   // 被删除，切换到全部便签
                     currentFolderId = -1;
                     spinner.setSelection(0);
-//                    NoteDBUtil.setsFolderId(currentFolderId);
+                }else{  // 可能已经被改名，重新设置选中项
+                    spinner.setSelection(FolderDBUtil.getRank(currentFolderId)+1);
                 }
-//                else {     // 没被删除也有可能被清空了，更新数据
-//                    adapter.notifyDataSetChanged();
-//                }
             } else if (resultCode == RESULT_OK) {
                 currentFolderId = data.getIntExtra("folderId", -1);
-                Log.d(TAG, "onActivityResult: folderdb "+currentFolderId);
-//                NoteDBUtil.setsFolderId(currentFolderId);
                 if (currentFolderId < 0) {
                     spinner.setSelection(0);
                 } else {
@@ -423,38 +482,66 @@ public class MainActivity extends AppCompatActivity
 
             NoteDBUtil.setsFolderId(currentFolderId);
             adapter.notifyDataSetChanged();
+            updateRecyBg();
         }
     }
 
-//    @Override
-//    protected void onNewIntent(Intent intent) {
-//        super.onNewIntent(intent);
-//        int folderId=intent.getIntExtra("folderId",-1);
-//        NoteDBUtil.setsFolderId(folderId);
-//        toolbar.setTitle(intent.getStringExtra("folderName"));
-//        adapter.notifyDataSetChanged();
-//    }
-
-    private void createLayoutDialog() {
-//        Toast.makeText(this, "create layoutdialog", Toast.LENGTH_SHORT).show();
+    private void initLayoutDialog() {
+        int checkedItem=0;
+        // FIXME: 2018/8/25 改用枚举,可以让映射更简单些
+        String itemText="";
+        if(layoutType==MyViewHolderFactory.DEFAULT){
+            itemText=layoutLinear;
+        }else if(layoutType==MyViewHolderFactory.GRID){
+            itemText=layoutGrid;
+        }
+        for (int i = 0; i < layoutItems.length; i++) {
+            if (itemText.equals(layoutItems[i])) {
+                checkedItem = i;
+                break;
+            }
+        }
         layoutDialog = new AlertDialog.Builder(this)
-                .setSingleChoiceItems(layoutItems, 0, new DialogInterface.OnClickListener() {
+                .setSingleChoiceItems(layoutItems, checkedItem, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        if ("默认布局".equals(layoutItems[i])) {
+                        if (layoutLinear.equals(layoutItems[i])) {
                             if (adapter.setLayoutType(MyViewHolderFactory.DEFAULT)) {
-                                recyclerView.setLayoutManager(DEFAULT_LAYOUT);
-                                recyclerView.setPadding(0, 0, 0, 8);
                                 layoutType = MyViewHolderFactory.DEFAULT;
+                                updateRecyLayout();
                             }
-                        } else if ("网格布局".equals(layoutItems[i])) {
-                            if (adapter.setLayoutType(GRID)) {
-                                recyclerView.setLayoutManager(GRID_LAYOUT);
-                                recyclerView.setPadding(12, 0, 12, 12);
-                                layoutType = GRID;
+                        } else if (layoutGrid.equals(layoutItems[i])) {
+                            if (adapter.setLayoutType(MyViewHolderFactory.GRID)) {
+                                layoutType = MyViewHolderFactory.GRID;
+                                updateRecyLayout();
                             }
                         }
                         layoutDialog.dismiss();
+                    }
+                })
+                .create();
+    }
+
+    private void initOrderDialog(){
+        int checkedItem=0;
+        for(int i=0;i<orderItems.length;i++){
+            if(orderType.mTag.equals(orderItems[i])){
+                checkedItem=i;
+                break;
+            }
+        }
+        orderDialog = new AlertDialog.Builder(this)
+                .setSingleChoiceItems(orderItems, checkedItem, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        String tag=orderItems[i];
+                        Order e=Order.findByTag(tag);
+                        if(orderType!=e) {
+                            orderType=e;
+                            NoteDBUtil.setsOrder(orderType);
+                            adapter.notifyDataSetChanged();
+                        }
+                        orderDialog.dismiss();
                     }
                 })
                 .create();
@@ -465,7 +552,6 @@ public class MainActivity extends AppCompatActivity
         if (select) {
             AnimationUtil.animateOut(fab, AnimationUtil.INTERPOLATOR, null);
         } else {
-//            adapter.notifyDataSetChanged();
             AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
         }
     }
@@ -486,5 +572,60 @@ public class MainActivity extends AppCompatActivity
             NoteDBUtil.remove(note);
             adapter.notifyItemRemoved(position);
         }
+    }
+
+    private void updateRecyBg(){
+        if(adapter.getItemCount()==0){
+            recyclerView.setBackgroundResource(R.drawable.blank_bg);
+        }else{
+            recyclerView.setBackgroundColor(getResources().getColor(R.color.grayE));
+        }
+    }
+
+    private void updateRecyLayout(){
+        if(layoutType==MyViewHolderFactory.DEFAULT){
+            recyclerView.setLayoutManager(DEFAULT_LAYOUT);
+            recyclerView.setPadding(0, 0, 0, 8);
+        }else if(layoutType==MyViewHolderFactory.GRID){
+            recyclerView.setLayoutManager(GRID_LAYOUT);
+            recyclerView.setPadding(12, 0, 12, 12);
+        }
+    }
+
+    private void setStatusBarColor(int statusColor) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            //取消状态栏透明
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            //添加Flag把状态栏设为可绘制模式
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            //设置状态栏颜色
+            window.setStatusBarColor(statusColor);
+            //设置系统状态栏处于可见状态
+            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+//            //让view不根据系统窗口来调整自己的布局
+//            ViewGroup mContentView = (ViewGroup) window.findViewById(Window.ID_ANDROID_CONTENT);
+//            View mChildView = mContentView.getChildAt(0);
+//            if (mChildView != null) {
+//                ViewCompat.setFitsSystemWindows(mChildView, false);
+//                ViewCompat.requestApplyInsets(mChildView);
+//            }
+        }
+    }
+
+    private void savePrefs(){
+        SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
+        editor.putInt("folderId", currentFolderId);
+        editor.putInt("layoutType",layoutType);
+        editor.putInt("orderType",orderType.mId);
+        editor.apply();
+    }
+
+    private void loadPrefs(){
+        SharedPreferences pref = getPreferences(MODE_PRIVATE);
+        currentFolderId = pref.getInt("folderId", -1);
+        layoutType=pref.getInt("layoutType",MyViewHolderFactory.DEFAULT);
+        int orderId=pref.getInt("orderType",-1);
+        orderType=Order.findById(orderId);
     }
 }

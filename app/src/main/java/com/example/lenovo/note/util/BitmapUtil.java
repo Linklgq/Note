@@ -43,19 +43,6 @@ public class BitmapUtil {
     private static final int FAILED_ID =R.drawable.failed_picture;
     private static final int DEFAULT_WIDTH=300;
 
-//    static class BitmapNode{
-//        String name;
-//        Bitmap data;
-//
-//        public BitmapNode(String name, Bitmap data) {
-//            this.name = name;
-//            this.data = data;
-//        }
-//    }
-//
-//    private static int sCachedSize=16;
-//    private static final List<BitmapNode> mCachedBitmaps=new Vector<>(sCachedSize);
-
     private static Bitmap loading;
     private static final int LOADING_ID=R.drawable.loading_bg;
 
@@ -77,6 +64,7 @@ public class BitmapUtil {
         return loading;
     }
 
+    /** 获取图片缓存*/
     public static Bitmap getCache(String key){
         if(key==null){
             return null;
@@ -84,6 +72,7 @@ public class BitmapUtil {
         return BITMAP_CACHE.get(key);
     }
 
+    /** 存入缓存*/
     public static void putCache(String key,Bitmap value){
         if(key==null||value==null){
             Log.d(TAG, "putCache: key "+(key==null)+",value "+(value==null));
@@ -92,44 +81,6 @@ public class BitmapUtil {
         value=scaleTo(value,sCachedWidth,-1.0);
         BITMAP_CACHE.put(key,value);
     }
-
-//    public static Bitmap cachedBitmap(String name){
-//        if(name==null){
-//            return null;
-//        }
-//        Bitmap bitmap=null;
-//        for(int i=mCachedBitmaps.size()-1;i>=0;i--){
-//            if(name.equals(mCachedBitmaps.get(i).name)){
-//                bitmap=mCachedBitmaps.get(i).data;
-//                Log.d(TAG, "cachedBitmap: get cache "+name);
-//                break;
-//            }
-//        }
-//        return bitmap;
-//    }
-//
-//    public static void addBitmapToCache(String name,Bitmap data){
-//        if(name==null){
-//            return;
-//        }
-//        // 如果已缓存，将其移到队尾
-//        for(int i=mCachedBitmaps.size()-1;i>=0;i--){
-//            if(name.equals(mCachedBitmaps.get(i).name)){
-//                BitmapNode node=mCachedBitmaps.get(i);
-//                mCachedBitmaps.remove(i);
-//                mCachedBitmaps.add(node);
-//                return;
-//            }
-//        }
-//        // 如果队列已达最大长度，移除队首元素
-//        if(mCachedBitmaps.size()==sCachedSize){
-//            mCachedBitmaps.remove(0);
-//        }
-//
-//        data=scaleTo(data,sCachedWidth,-1.0);
-//        mCachedBitmaps.add(new BitmapNode(name,data));
-//        Log.d(TAG, "addBitmapToCache: "+name);
-//    }
 
     public static Bitmap decodeFromResource(int id, int reqWidth){
         if(reqWidth<=0){
@@ -145,10 +96,7 @@ public class BitmapUtil {
         if(temp==null){
             return null;
         }
-        Log.d(TAG, "decodeFromResource: "+temp.getWidth());
         Bitmap result=scaleTo(temp,reqWidth,-1.0);
-        Log.d(TAG, "decodeFromResource: "+result.getWidth());
-//        temp.recycle();
         return result;
     }
 
@@ -167,14 +115,11 @@ public class BitmapUtil {
         if(temp==null){
             return null;
         }
-        Log.d(TAG, "decodeFromFile: "+temp.getWidth()+" "+temp.getHeight());
         Bitmap result=scaleTo(temp,reqWidth,-1.0);
-        Log.d(TAG, "decodeFromFile: result "+result.getWidth()+" "+result.getHeight());
-        Log.d(TAG, "decodeFromFile: result "+result.getByteCount()/1024/1024+"MB");
-//        temp.recycle();
         return result;
     }
 
+    /** 测量图片的宽高*/
     public static BitmapFactory.Options measureFromFile(String filePath){
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
@@ -182,18 +127,8 @@ public class BitmapUtil {
         return options;
     }
 
-//    public static Bitmap decodeFromStream(InputStream inputStream,int reqWidth){
-//        BitmapFactory.Options options = new BitmapFactory.Options();
-//        options.inJustDecodeBounds = true;
-//        BitmapFactory.decodeStream(inputStream,null,options);
-//        options.inSampleSize = calculateSampleSize(options,reqWidth,0);
-//        options.inJustDecodeBounds =false;
-//        Bitmap temp=BitmapFactory.decodeStream(inputStream,null,options);
-//        Bitmap result=scaleTo(temp,reqWidth);
-//        temp.recycle();
-//        return result;
-//    }
-
+    /** 对图片进行缩放，缩放后可能还是是同一个对象
+     * maxProp为高与宽的最大比值*/
     public static Bitmap scaleTo(Bitmap oldBitmap,int afterWidth,double maxProp){
         int width=oldBitmap.getWidth();
         int height;
@@ -209,10 +144,10 @@ public class BitmapUtil {
         Bitmap newBitmap = Bitmap.createBitmap(oldBitmap,
                 0, 0, width,height, matrix, true);
 
-        Log.d(TAG, "scaleTo: "+width+" "+height);
         return newBitmap;
     }
 
+    /** 保存到包名/files/目录下 */
     public static boolean save(Bitmap bitmap,String fileName){
         Context context=MyApplication.getContext();
         FileOutputStream out=null;
@@ -235,6 +170,7 @@ public class BitmapUtil {
         return false;
     }
 
+    /** 从包名/files/目录下加载图片 */
     public static Bitmap load(String fileName,int reqWidth){
 //        if(reqWidth<=0){
 //            reqWidth=NO_REQUEST;
@@ -244,19 +180,18 @@ public class BitmapUtil {
 
         Bitmap bitmap=decodeFromFile(filePath,reqWidth);
         if(bitmap==null){
-            Log.d(TAG, "load: getfailed "+filePath);
             return getFailed();
         }
         return bitmap;
     }
 
+    /** 计算合适的采样率，以期降低图片占用内存 */
     private static int calculateSampleSize(BitmapFactory.Options options,int reqWidth,int reqHeight){
         int width = options.outWidth;
         int height =options.outHeight;
         int inSampleSize = 1;
         int halfWidth = width/2;
         int halfHeight = height/2;
-//        Log.d(TAG, "calculateSampleSize: "+reqWidth+" "+reqHeight);
         while((halfWidth/inSampleSize)>=reqWidth&& (halfHeight/inSampleSize)>=reqHeight){
             inSampleSize*=2;
         }

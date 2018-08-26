@@ -37,7 +37,7 @@
             android:layout_marginLeft="15dp"
             android:layout_marginRight="15dp"
             android:background="@null"
-            android:hint="点击这里"
+            android:hint="从这里开始"
             android:paddingBottom="15dp"
             android:paddingTop="10dp"
             android:textSize="20sp"></EditText>

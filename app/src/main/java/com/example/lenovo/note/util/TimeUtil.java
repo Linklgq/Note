@@ -9,12 +9,6 @@ import java.util.Date;
  */
 
 public class TimeUtil {
-//    private static SimpleDateFormat simpleDateFormat=new SimpleDateFormat
-//            ("MM月dd日 HH:mm");
-//
-//    public static long currentTime(){
-//        return System.currentTimeMillis();
-//    }
     private static SimpleDateFormat HHmm=new SimpleDateFormat("HH:mm");
     private static SimpleDateFormat MMddHHmm=new SimpleDateFormat("MM/dd HH:mm");
     private static SimpleDateFormat yyyyMMddHHmm=new SimpleDateFormat("yyyy/MM/dd HH:mm");
