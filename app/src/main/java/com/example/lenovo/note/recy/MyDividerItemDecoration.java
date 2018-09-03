@@ -23,7 +23,7 @@ public class MyDividerItemDecoration extends DividerItemDecoration {
         if(parent.getLayoutManager()instanceof LinearLayoutManager){
             outRect.set(0,8,0,8);
         }else if(parent.getLayoutManager()instanceof StaggeredGridLayoutManager){
-            outRect.set(12,12,12,12);
+            outRect.set( 12,12,12,12);
         }
 //        outRect.set(12,12,12,12);
     }

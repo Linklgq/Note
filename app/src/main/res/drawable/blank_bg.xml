@@ -8,28 +8,28 @@
 
     <path android:pathData="M 80,100 H 240 Z"
           android:strokeWidth="1"
-          android:strokeColor="@color/grayE"></path>
+          android:strokeColor="#EFEFEF"></path>
 
     <path android:pathData="M 80,120 H 240 Z"
           android:strokeWidth="1"
-          android:strokeColor="@color/grayE"></path>
+          android:strokeColor="#EFEFEF"></path>
 
     <path android:pathData="M 80,140 H 240 Z"
           android:strokeWidth="1"
-          android:strokeColor="@color/grayE"></path>
+          android:strokeColor="#EFEFEF"></path>
 
     <path android:pathData="M 80,160 H 160 Z"
           android:strokeWidth="1"
-          android:strokeColor="@color/grayE"></path>
+          android:strokeColor="#EFEFEF"></path>
 
     <group
         android:rotation="45"
         android:pivotX="160"
         android:pivotY="160">
-        <path android:fillColor="@color/grayE"
+        <path android:fillColor="#EFEFEF"
             android:pathData="M 160,160 L 156, 155 V 121 H 164 V 155 L 160,160 Z"></path>
 
-        <path android:fillColor="@color/grayE"
+        <path android:fillColor="#EFEFEF"
             android:pathData="M 156,118 V 112 H 164 V 118 H 156 Z"></path>
     </group>
 

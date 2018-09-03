@@ -59,6 +59,7 @@ public class NoteEditActivity extends AppCompatActivity {
     public static final int TAKE_PHOTO=0;
     public static final int CHOOSE_FROM_ALBUM=1;
     private ActionMode actionMode;
+    private ActionMode.Callback callback;
     private Toolbar toolbar;
     private EditText editor;
     private final String[] photoItems={"拍照","从相册选择"};
@@ -95,13 +96,8 @@ public class NoteEditActivity extends AppCompatActivity {
         long time=note.getModifiedTime();
 
         loadNote= (ProgressBar) findViewById(R.id.load_progress_bar);
-        initEditor();
 
-        ActionBar actionBar=getSupportActionBar();
-        actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setTitle(TimeUtil.timeString(time));
-
-        final ActionMode.Callback callback=new ActionMode.Callback() {
+        callback=new ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 MenuInflater inflater=mode.getMenuInflater();
@@ -141,10 +137,11 @@ public class NoteEditActivity extends AppCompatActivity {
                     InputMethodManager imm = (InputMethodManager) getSystemService
                             (Context.INPUT_METHOD_SERVICE);
                     imm.hideSoftInputFromWindow(getWindow()
-                            .getDecorView().getWindowToken(), 0); //强制隐藏键盘
+                                .getDecorView().getWindowToken(), 0); //强制隐藏键盘
                 }
                 actionMode=null;
                 editor.setCursorVisible(false);
+                Log.d(TAG, "onDestroyActionMode: ");
             }
         };
 
@@ -153,24 +150,27 @@ public class NoteEditActivity extends AppCompatActivity {
             public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
                 if(actionMode==null&&isSoftInputShowing()){
                     actionMode=startSupportActionMode(callback);
-                }else if(actionMode!=null&&!isSoftInputShowing()){
-                    actionMode.finish();
                 }
+//                else if(actionMode!=null&&!isSoftInputShowing()){
+//                    actionMode.finish();
+//                }
             }
         });
 
-        loadPic = (ProgressBar) findViewById(R.id.progress_bar);
-    }
+        initEditor();
 
-    @Override
-    protected void onStart() {
-        super.onStart();
+        ActionBar actionBar=getSupportActionBar();
+        actionBar.setDisplayHomeAsUpEnabled(true);
+        actionBar.setTitle(TimeUtil.timeString(time));
+
+        loadPic = (ProgressBar) findViewById(R.id.progress_bar);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch(requestCode){
             case TAKE_PHOTO:{
+                Log.d(TAG, "onActivityResult: "+resultCode);
                 if(resultCode==RESULT_OK){
                     insertPhoto(editor.getText(),photo,TAKE_PHOTO);
                 }
@@ -226,6 +226,7 @@ public class NoteEditActivity extends AppCompatActivity {
             Toast.makeText(this, "取消图片插入", Toast.LENGTH_SHORT).show();
             return;
         }
+
         saveNote();
         super.onBackPressed();
     }
@@ -262,7 +263,7 @@ public class NoteEditActivity extends AppCompatActivity {
     }
 
     private void takePhoto(){
-        photo=new File(getCacheDir(),System.currentTimeMillis()+".png");
+        photo=new File(getExternalCacheDir(),System.currentTimeMillis()+".png");
         try {
             photo.createNewFile();
         } catch (IOException e) {
@@ -270,19 +271,21 @@ public class NoteEditActivity extends AppCompatActivity {
             Toast.makeText(this, "无法创建图片", Toast.LENGTH_SHORT).show();
             return;
         }
+        
         if(Build.VERSION.SDK_INT>=24){
             photoUri= FileProvider.getUriForFile(NoteEditActivity.this,
                     "com.example.lenovo.note.fileprovider",photo);
         }else{
             photoUri=Uri.fromFile(photo);
         }
-
         Intent intent=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         intent.putExtra(MediaStore.EXTRA_OUTPUT,photoUri);
         startActivityForResult(intent,TAKE_PHOTO);
     }
 
     private void insertPhoto(final Editable editable, File file,int srcType) {
+        Log.d(TAG, "insertPhoto: start");
+
         insertPictureTask= new InsertPictureTask(this,
                 editor.getWidth(), file, srcType,
                 new InsertPictureTask.InsertPictureListener() {
@@ -312,6 +315,8 @@ public class NoteEditActivity extends AppCompatActivity {
                 });
         displayProgressBar();
         insertPictureTask.execute();
+
+        Log.d(TAG, "insertPhoto: end");
     }
 
     private void saveNote(){
@@ -374,7 +379,7 @@ public class NoteEditActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         if("拍照".equals(photoItems[i])){
-                            Log.d(TAG, "onClick: "+getFilesDir().getPath());
+//                            Log.d(TAG, "onClick: "+getFilesDir().getPath());
                             actionMode.finish();
                             takePhoto();
                         }else if("从相册选择".equals(photoItems[i])){
@@ -415,6 +420,7 @@ public class NoteEditActivity extends AppCompatActivity {
         editor.setText(note.getContent());
 
         // FIXME: 2018/8/26 剪切复制时图片的处理暂时还没想好，先禁止剪切复制
+        // 在小米（Android 6.0）下无法禁止，应该是其使用的是其他id
         editor.setCustomSelectionActionModeCallback(new android.view.ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(android.view.ActionMode actionMode, Menu menu) {
@@ -439,8 +445,6 @@ public class NoteEditActivity extends AppCompatActivity {
             }
         });
 
-        // TODO: 2018/8/8 复制粘贴
-        // FIXME: 2018/8/18 加载时也会触发
         editor.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence,
@@ -451,21 +455,28 @@ public class NoteEditActivity extends AppCompatActivity {
                     NoteAnalUtil.rmText(cs);
                 }
 
-                Log.d(TAG, "beforeTextChanged: before");
+//                Log.d(TAG, "beforeTextChanged: before");
             }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int start, int before, int count) {
-                Log.d(TAG, "onTextChanged: on");
+//                Log.d(TAG, "onTextChanged: on");
             }
 
             @Override
             public void afterTextChanged(Editable editable) {
-                Log.d(TAG, "afterTextChanged: after");
+//                Log.d(TAG, "afterTextChanged: after");
             }
         });
 
-
+        editor.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(actionMode==null){
+                    actionMode=startSupportActionMode(callback);
+                }
+            }
+        });
 
         if(NoteAnalUtil.firstPic(note.getContent())==null){
             return;
@@ -479,7 +490,7 @@ public class NoteEditActivity extends AppCompatActivity {
                     @Override
                     public void onMatch(Bitmap bitmap, int start, int end) {
                         ImageSpan imageSpan = new ImageSpan(NoteEditActivity.this, bitmap);
-                        // FIXME: 2018/8/17 改为替换
+                        // FIXME: 2018/8/17 改为替换?
                         editor.getText().setSpan(imageSpan,start,end,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                         editor.setText(editor.getText());

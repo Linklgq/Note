@@ -3,6 +3,7 @@ package com.example.lenovo.note.recy;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -37,7 +38,7 @@ public class MyViewHolderFactory {
             case DEFAULT: {
                 Log.d(TAG, "getType: default");
                 View view = LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.note_item_default, parent, false);
+                        .inflate(R.layout.note_item_linear, parent, false);
                 return new DefaultViewHolder(view);
             }
             case GRID: {
@@ -90,12 +91,19 @@ public class MyViewHolderFactory {
         int width;
         LoadThumbnailTask task;
 
-        public GridViewHolder(View itemView) {
+        public GridViewHolder(final View itemView) {
             super(itemView);
             noteContent = (TextView) itemView.findViewById(R.id.note_content);
             updateTime = (TextView) itemView.findViewById(R.id.update_time);
             nums++;
             count = nums;
+
+            noteContent.post(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "run: width "+noteContent.getWidth());
+                }
+            });
         }
 
 //        @Override
@@ -164,10 +172,17 @@ public class MyViewHolderFactory {
             Log.d(TAG, "bind: " + count);
             long time1=System.currentTimeMillis();
             // FIXME: 2018/8/24 精准宽度
-            width = (w - 180) / 2;
+            width = (w - 168) / 2;
+            // 低版本有多余的间距
+            // 而且宽度比view宽度大的话会重复显示
+            if(Build.VERSION.SDK_INT<=Build.VERSION_CODES.KITKAT){
+                width-=20;
+            }
             if (width <= 0) {
                 return;
             }
+
+            Log.d(TAG, "bind: width "+width);
 
             Note note = NoteDBUtil.get(position);
             updateTime.setText(TimeUtil.timeString(note.getModifiedTime()));

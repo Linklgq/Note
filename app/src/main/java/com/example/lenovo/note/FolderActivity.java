@@ -137,11 +137,20 @@ public class FolderActivity extends AppCompatActivity {
                 .create();
 
         addFolderDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            EditText et;
             @Override
             public void onShow(DialogInterface dialogInterface) {
-                InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(
-                        Context.INPUT_METHOD_SERVICE);
-                inputMethodManager.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
+                if(et==null){
+                    et=addFolderDialog.getWindow().findViewById(R.id.edit_text);
+                }
+                et.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(
+                                Context.INPUT_METHOD_SERVICE);
+                        inputMethodManager.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
+                    }
+                });
             }
         });
 
@@ -277,11 +286,20 @@ public class FolderActivity extends AppCompatActivity {
                 .create();
 
         renameDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            EditText et;
             @Override
             public void onShow(DialogInterface dialogInterface) {
-                InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(
-                        Context.INPUT_METHOD_SERVICE);
-                inputMethodManager.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
+                if(et==null){
+                    et=renameDialog.getWindow().findViewById(R.id.edit_text);
+                }
+                et.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(
+                                Context.INPUT_METHOD_SERVICE);
+                        inputMethodManager.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
+                    }
+                });
             }
         });
 
