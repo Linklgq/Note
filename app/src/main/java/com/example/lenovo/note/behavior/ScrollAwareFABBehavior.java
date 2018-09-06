@@ -56,7 +56,7 @@ public class ScrollAwareFABBehavior extends FloatingActionButton.Behavior {
                     view.setVisibility(View.INVISIBLE);
                 }
             });
-        } else if (dyConsumed < 0 && child.getVisibility() != View.VISIBLE) {
+        } else if (dyConsumed < 0 && child.getVisibility() == View.INVISIBLE) {
             AnimationUtil.animateIn(child,AnimationUtil.INTERPOLATOR,null);
         }
     }

@@ -1,14 +1,10 @@
 package com.example.lenovo.note;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.example.lenovo.note.util.BitmapUtil;
 import com.example.lenovo.note.util.NoteAnalUtil;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by Lenovo on 2018/8/10.
@@ -33,14 +29,12 @@ public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Bool
     }
 
     private CharSequence text;
-    private Context context;
     private LoadNotePicListener loadNotePicListener;
     private int picWidth;
 
     public LoadNotePicTask(CharSequence text,LoadNotePicListener loadNotePicListener) {
         this.text = text;
         this.loadNotePicListener = loadNotePicListener;
-        context=MyApplication.getContext();
     }
 
     @Override
@@ -48,7 +42,7 @@ public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Bool
         if(loadNotePicListener==null){
             return false;
         }
-        long time1=System.currentTimeMillis();
+//        long time1=System.currentTimeMillis();
         NoteAnalUtil.contentAnalyze(text,
                 new NoteAnalUtil.MatchPictureListener(){
                     @Override
@@ -62,9 +56,8 @@ public class LoadNotePicTask extends AsyncTask<Void,LoadNotePicTask.Options,Bool
                         return isCancelled();
                     }
                 });
-        long time2=System.currentTimeMillis();
-        Log.d(TAG, "doInBackground: "+(time2-time1)+"ms");
-        context=null;
+//        long time2=System.currentTimeMillis();
+//        Log.d(TAG, "doInBackground: "+(time2-time1)+"ms");
         return true;
     }
 

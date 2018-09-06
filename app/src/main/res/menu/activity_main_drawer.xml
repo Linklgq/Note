@@ -1,40 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:id="@+id/note_group">
+        <item
+            android:id="@+id/my_notes"
+            android:icon="@drawable/ic_note"
+            android:title="便签"></item>
+
+        <item
+            android:id="@+id/note_folder"
+            android:icon="@drawable/ic_folder_special"
+            android:title="便签夹"></item>
+    </group>
+
     <item
-        android:id="@+id/all_note"
-        android:icon="@drawable/ic_folder_special"
-        android:title="便签"></item>
-
-    <!--<group android:checkableBehavior="single">-->
-        <!--<item-->
-            <!--android:id="@+id/nav_camera"-->
-            <!--android:icon="@drawable/ic_menu_camera"-->
-            <!--android:title="Import"/>-->
-        <!--<item-->
-            <!--android:id="@+id/nav_gallery"-->
-            <!--android:icon="@drawable/ic_menu_gallery"-->
-            <!--android:title="Gallery"/>-->
-        <!--<item-->
-            <!--android:id="@+id/nav_slideshow"-->
-            <!--android:icon="@drawable/ic_menu_slideshow"-->
-            <!--android:title="Slideshow"/>-->
-        <!--<item-->
-            <!--android:id="@+id/nav_manage"-->
-            <!--android:icon="@drawable/ic_menu_manage"-->
-            <!--android:title="Tools"/>-->
-    <!--</group>-->
-
-    <!--<item android:title="Communicate">-->
-        <!--<menu>-->
-            <!--<item-->
-                <!--android:id="@+id/nav_share"-->
-                <!--android:icon="@drawable/ic_menu_share"-->
-                <!--android:title="Share"/>-->
-            <!--<item-->
-                <!--android:id="@+id/nav_send"-->
-                <!--android:icon="@drawable/ic_menu_send"-->
-                <!--android:title="Send"/>-->
-        <!--</menu>-->
-    <!--</item>-->
+        android:id="@+id/recycle_bin"
+        android:icon="@drawable/ic_recycle"
+        android:title="回收站"></item>
 
 </menu>

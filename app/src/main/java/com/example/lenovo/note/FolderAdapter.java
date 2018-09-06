@@ -11,7 +11,7 @@ import android.widget.Filter;
 import android.widget.Filterable;
 import android.widget.TextView;
 
-import com.example.lenovo.note.db.FolderDBUtil;
+import com.example.lenovo.note.db.FolderDBHelper;
 
 /**
  * Created by Lenovo on 2018/8/20.
@@ -79,7 +79,7 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
             @Override
             public boolean onLongClick(View view) {
                 int pos=holder.getAdapterPosition();
-                if(FolderDBUtil.getNoteCount(pos)==0){
+                if(FolderDBHelper.getNoteCount(pos)==0){
                     popupMenu.getMenu().findItem(R.id.clear).setEnabled(false);
                 }else{
                     popupMenu.getMenu().findItem(R.id.clear).setEnabled(true);
@@ -93,13 +93,13 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        holder.folderName.setText(FolderDBUtil.get(position).getFolderName());
-        holder.noteCount.setText(String.valueOf(FolderDBUtil.getNoteCount(position)));
+        holder.folderName.setText(FolderDBHelper.get(position).getFolderName());
+        holder.noteCount.setText(String.valueOf(FolderDBHelper.getNoteCount(position)));
     }
 
     @Override
     public int getItemCount() {
-        return FolderDBUtil.folderCount();
+        return FolderDBHelper.folderCount();
     }
 
     @Override
@@ -107,8 +107,8 @@ public class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.ViewHolder
         return new Filter() {
             @Override
             protected FilterResults performFiltering(CharSequence charSequence) {
-                FolderDBUtil.setFilter(true,charSequence.toString());
-                FolderDBUtil.query();
+                FolderDBHelper.setFilter(true,charSequence.toString());
+                FolderDBHelper.query();
                 return null;
             }
 

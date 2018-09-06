@@ -9,6 +9,7 @@ import org.litepal.crud.DataSupport;
 public class Folder extends DataSupport{
     private int id;
     private String folderName;
+    private boolean isRemoved=false;
 
     public int getId() {
         return id;
@@ -24,5 +25,13 @@ public class Folder extends DataSupport{
 
     public void setFolderName(String folderName) {
         this.folderName = folderName;
+    }
+
+    public boolean isRemoved() {
+        return isRemoved;
+    }
+
+    public void setRemoved(boolean removed) {
+        isRemoved = removed;
     }
 }

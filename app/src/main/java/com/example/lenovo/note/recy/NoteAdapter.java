@@ -1,18 +1,15 @@
 package com.example.lenovo.note.recy;
 
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
 
-import com.example.lenovo.note.db.NoteDBUtil;
+import com.example.lenovo.note.db.NoteDBHelper;
 
 import java.util.HashSet;
 import java.util.Set;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by Lenovo on 2018/7/27.
@@ -32,7 +29,7 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder>
 
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        Log.d(TAG, "onCreateViewHolder: "+count++);
+//        Log.d(TAG, "onCreateViewHolder: "+count++);
         final MyViewHolder holder=MyViewHolderFactory.getType(parent,viewType);
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -62,7 +59,7 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder>
 
     @Override
     public int getItemCount() {
-        return NoteDBUtil.count();
+        return NoteDBHelper.count();
     }
 
     @Override
@@ -74,19 +71,7 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder>
     public void onViewRecycled(MyViewHolder holder) {
         super.onViewRecycled(holder);
         holder.recycled();
-        Log.d(TAG, "onViewRecycled: cancel task");
-    }
-
-    @Override
-    public void onViewAttachedToWindow(MyViewHolder holder) {
-        super.onViewAttachedToWindow(holder);
-        Log.d(TAG, "onViewAttachedToWindow: ");
-    }
-
-    @Override
-    public void onViewDetachedFromWindow(MyViewHolder holder) {
-        super.onViewDetachedFromWindow(holder);
-        Log.d(TAG, "onViewDetachedFromWindow: ");
+//        Log.d(TAG, "onViewRecycled: cancel task");
     }
 
     @Override
@@ -94,8 +79,8 @@ public class NoteAdapter extends RecyclerView.Adapter<MyViewHolder>
         return new Filter() {
             @Override
             protected FilterResults performFiltering(CharSequence charSequence) {
-                NoteDBUtil.setFilter(true,charSequence.toString());
-                NoteDBUtil.query();
+                NoteDBHelper.setFilter(true,charSequence.toString());
+                NoteDBHelper.query();
                 return null;
             }
 

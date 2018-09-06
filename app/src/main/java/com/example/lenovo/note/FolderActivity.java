@@ -24,7 +24,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.example.lenovo.note.db.Folder;
-import com.example.lenovo.note.db.FolderDBUtil;
+import com.example.lenovo.note.db.FolderDBHelper;
 import com.example.lenovo.note.recy.MyDividerItemDecoration;
 import com.example.lenovo.note.util.NoteAnalUtil;
 
@@ -37,14 +37,14 @@ public class FolderActivity extends AppCompatActivity {
     private AlertDialog addFolderDialog;
     private FolderAdapter adapter;
     private SearchView mSearchView;
+    private FloatingActionButton fab;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_folder);
 
-        // FIXME: 2018/8/21
-        FolderDBUtil.clearCache();
+        FolderDBHelper.clearCache();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -52,8 +52,8 @@ public class FolderActivity extends AppCompatActivity {
         actionBar.setDisplayHomeAsUpEnabled(true);
 
         notesCount = (TextView) findViewById(R.id.all_file_count);
-        notesCount.setText(String.valueOf(FolderDBUtil.totalNotes()));
-        allNotes = findViewById(R.id.all_note);
+        notesCount.setText(String.valueOf(FolderDBHelper.totalNotes()));
+        allNotes = findViewById(R.id.note_folder);
         allNotes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -61,13 +61,14 @@ public class FolderActivity extends AppCompatActivity {
                 intent.putExtra("folderId", -1);
                 intent.putExtra("folderName", "全部便签");
                 setResult(RESULT_OK, intent);
+                FolderDBHelper.setFilter(false,null);
                 finish();
             }
         });
 
         initRecyclerView();
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -101,14 +102,19 @@ public class FolderActivity extends AppCompatActivity {
                 return false;
             }
         });
-//        mSearchView.setOnCloseListener(new SearchView.OnCloseListener() {
-//            @Override
-//            public boolean onClose() {
-//                Log.d(TAG, "onClose: close searchview");
-//                FolderDBUtil.setFilter(false,null);
-//                return false;
-//            }
-//        });
+        MenuItemCompat.setOnActionExpandListener(searchItem, new MenuItemCompat.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                fab.setVisibility(View.GONE);
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                fab.setVisibility(View.VISIBLE);
+                return true;
+            }
+        });
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -126,7 +132,6 @@ public class FolderActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         setResult(RESULT_CANCELED);
-        Log.d(TAG, "onBackPressed: ");
         super.onBackPressed();
     }
 
@@ -165,7 +170,7 @@ public class FolderActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String text = editText.getText().toString();
-                if (text.length() > FolderDBUtil.NAME_MAX_LENGTH) {
+                if (text.length() > FolderDBHelper.NAME_MAX_LENGTH) {
                     editText.setError("超出限定长度");
                     return;
                 }
@@ -176,8 +181,8 @@ public class FolderActivity extends AppCompatActivity {
                 }
                 Folder folder = new Folder();
                 folder.setFolderName(folderName);
-                if (FolderDBUtil.add(folder)) {
-                    int position = FolderDBUtil.getRank(folder.getId());
+                if (FolderDBHelper.add(folder)) {
+                    int position = FolderDBHelper.getRank(folder.getId());
                     adapter.notifyItemInserted(position);
                     recyclerView.smoothScrollToPosition(position);
                     Log.d(TAG, "onClick: insert " + position);
@@ -206,12 +211,12 @@ public class FolderActivity extends AppCompatActivity {
                 new FolderAdapter.OnItemClickListener() {
                     @Override
                     public void onClick(int position) {
-                        Folder folder = FolderDBUtil.get(position);
+                        Folder folder = FolderDBHelper.get(position);
                         Intent intent = new Intent();
                         intent.putExtra("folderId", folder.getId());
                         intent.putExtra("folderName", folder.getFolderName());
                         setResult(RESULT_OK, intent);
-                        FolderDBUtil.setFilter(false,null);
+                        FolderDBHelper.setFilter(false,null);
                         finish();
                     }
                 },
@@ -252,10 +257,9 @@ public class FolderActivity extends AppCompatActivity {
                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        FolderDBUtil.clearNotes(position);
+                        FolderDBHelper.clearNotes(position);
                         adapter.notifyItemChanged(position);
-                        notesCount.setText(String.valueOf(FolderDBUtil.totalNotes()));
-                        Log.d(TAG, "onClick: clear " + position);
+                        notesCount.setText(String.valueOf(FolderDBHelper.totalNotes()));
                     }
                 })
                 .setNegativeButton("取消", null)
@@ -269,9 +273,9 @@ public class FolderActivity extends AppCompatActivity {
                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        FolderDBUtil.remove(position);
+                        FolderDBHelper.remove(position);
                         adapter.notifyItemRemoved(position);
-                        notesCount.setText(String.valueOf(FolderDBUtil.totalNotes()));
+                        notesCount.setText(String.valueOf(FolderDBHelper.totalNotes()));
                         Log.d(TAG, "onClick: remove " + position);
                     }
                 })
@@ -307,7 +311,7 @@ public class FolderActivity extends AppCompatActivity {
 
         final EditText editText = (EditText) (renameDialog.getWindow().findViewById(R.id.edit_text));
         editText.setSingleLine();
-        editText.setText(FolderDBUtil.get(position).getFolderName());
+        editText.setText(FolderDBHelper.get(position).getFolderName());
         editText.selectAll();
         TextView ok = (TextView) (renameDialog.getWindow().findViewById(R.id.action_ok));
         TextView cancel = (TextView) (renameDialog.getWindow().findViewById(R.id.action_cancel));
@@ -315,7 +319,7 @@ public class FolderActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String text = editText.getText().toString();
-                if (text.length() > FolderDBUtil.NAME_MAX_LENGTH) {
+                if (text.length() > FolderDBHelper.NAME_MAX_LENGTH) {
                     editText.setError("超出限定长度");
                     return;
                 }
@@ -324,9 +328,9 @@ public class FolderActivity extends AppCompatActivity {
                     editText.setError("名字不能为空");
                     return;
                 }
-                int folderId = FolderDBUtil.get(position).getId();
-                if (FolderDBUtil.update(position, folderName)) {
-                    int nP = FolderDBUtil.getRank(folderId);
+                int folderId = FolderDBHelper.get(position).getId();
+                if (FolderDBHelper.update(position, folderName)) {
+                    int nP = FolderDBHelper.getRank(folderId);
                     Log.d(TAG, "onClick: 修改名字成功 " + nP);
                     adapter.notifyItemMoved(position, nP);
                     adapter.notifyItemChanged(nP);

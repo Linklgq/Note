@@ -2,11 +2,8 @@ package com.example.lenovo.note;
 
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.example.lenovo.note.util.BitmapUtil;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by Lenovo on 2018/8/15.
@@ -58,7 +55,7 @@ public class LoadThumbnailTask extends AsyncTask<Void,Integer,Boolean> {
 
     @Override
     protected void onCancelled() {
-        Log.d(TAG, "onCancelled: "+picName);
+//        Log.d(TAG, "onCancelled: "+picName);
         bitmap=null;
     }
 }

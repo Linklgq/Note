@@ -1,21 +1,24 @@
 package com.example.lenovo.note;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import com.example.lenovo.note.db.FolderDBUtil;
+import com.example.lenovo.note.db.FolderDBHelper;
 
 /**
  * Created by Lenovo on 2018/8/22.
  */
 
 public class FolderSpinnerAdapter extends BaseAdapter{
+    private static final String TAG = "FolderSpinnerAdapter";
     @Override
     public int getCount() {
-        return FolderDBUtil.folderCount()+1;
+//        Log.d(TAG, "getCount: "+FolderDBHelper.folderCount()+1);
+        return FolderDBHelper.folderCount()+1;
     }
 
     @Override
@@ -36,7 +39,8 @@ public class FolderSpinnerAdapter extends BaseAdapter{
         if(i==0){
             textView.setText("全部便签");
         }else{
-            textView.setText(FolderDBUtil.get(i-1).getFolderName());
+//            Log.d(TAG, "getView: "+(i-1));
+            textView.setText(FolderDBHelper.get(i-1).getFolderName());
         }
         return view;
     }

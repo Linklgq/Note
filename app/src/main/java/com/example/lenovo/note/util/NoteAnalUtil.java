@@ -7,14 +7,11 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
-import android.util.Log;
 
 import com.example.lenovo.note.MyApplication;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by Lenovo on 2018/7/28.
@@ -86,7 +83,6 @@ public class NoteAnalUtil {
     public static String paragraph(String text, int index) {
         String str;
         String[] array = text.split("\n", index + 2);
-        Log.d(TAG, "paragraph: " + array.length);
         if (index < array.length) {
             str = array[index];
         } else {

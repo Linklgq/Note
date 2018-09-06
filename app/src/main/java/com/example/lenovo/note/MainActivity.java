@@ -4,6 +4,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -11,7 +12,9 @@ import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.view.ViewPropertyAnimatorListener;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -29,15 +32,16 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 
 import com.example.lenovo.note.db.Folder;
-import com.example.lenovo.note.db.FolderDBUtil;
+import com.example.lenovo.note.db.FolderDBHelper;
 import com.example.lenovo.note.db.Note;
-import com.example.lenovo.note.db.NoteDBUtil;
+import com.example.lenovo.note.db.NoteDBHelper;
 import com.example.lenovo.note.db.Order;
 import com.example.lenovo.note.recy.MyDividerItemDecoration;
 import com.example.lenovo.note.recy.MyViewHolder;
@@ -56,7 +60,7 @@ import static com.example.lenovo.note.recy.MyViewHolderFactory.GRID;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
-    static{
+    static {
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
     }
 
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity
 
     private int layoutType;
     private Order orderType;
+    private int dbType = NoteDBHelper.GENERAL;
 
     private NoteAdapter adapter;
     private Toolbar toolbar;
@@ -85,31 +90,33 @@ public class MainActivity extends AppCompatActivity
     private String layoutLinear;
     private String layoutGrid;
     private String[] orderItems;
-    private String byCreateTime;
-    private String byModifiedTime;
-    private String byContent;
     private int currentFolderId;
     AppCompatSpinner spinner;
     FolderSpinnerAdapter spinnerAdapter;
     private SearchView mSearchView;
+    private boolean isSearching = false;
+
+    private final List<Note> mTempNotes = new ArrayList<>();
+    private final List<Integer> mTempInts = new ArrayList<>();
+    private Snackbar mSnackbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Resources res=getResources();
-        layoutItems=res.getStringArray(R.array.layout_items);
-        layoutLinear=res.getString(R.string.layout_linear);
-        layoutGrid=res.getString(R.string.layout_grid);
-        orderItems=res.getStringArray(R.array.order_items);
-        byCreateTime=res.getString(R.string.by_created_time);
-        byModifiedTime=res.getString(R.string.by_modified_time);
-        byContent=res.getString(R.string.by_content);
+        Resources res = getResources();
+        layoutItems = res.getStringArray(R.array.layout_items);
+        layoutLinear = res.getString(R.string.layout_linear);
+        layoutGrid = res.getString(R.string.layout_grid);
+        orderItems = res.getStringArray(R.array.order_items);
 
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.setTitle("回收站");
+        actionBar.setDisplayShowTitleEnabled(false);
 
         spinner = (AppCompatSpinner) findViewById(R.id.spinner_folder);
         spinnerAdapter = new FolderSpinnerAdapter();
@@ -117,43 +124,42 @@ public class MainActivity extends AppCompatActivity
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                Log.d(TAG, "onItemSelected: " + i);
-                int t=-1;
-                if(i>0) {
-                    t = FolderDBUtil.get(i - 1).getId();
-                    Log.d(TAG, "onItemSelected: folderdb "+t);
+                Log.d(TAG, "onItemSelected: spinner "+i);
+                int t = -1;
+                if (i > 0) {
+                    t = FolderDBHelper.get(i - 1).getId();
                 }
-                if(t!=currentFolderId) {
-                    currentFolderId=t;
-                    NoteDBUtil.setsFolderId(currentFolderId);
+                if (t != currentFolderId) {
+                    currentFolderId = t;
+                    NoteDBHelper.setsFolderId(currentFolderId);
                     adapter.notifyDataSetChanged();
                     updateRecyBg();
 
-                    AnimationUtil.animateIn(fab,AnimationUtil.INTERPOLATOR,null);
+                    AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
                 }
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> adapterView) {
-                Log.d(TAG, "onNothingSelected: nothing");
             }
         });
 
         loadPrefs();
-        NoteDBUtil.setsOrder(orderType);
+        NoteDBHelper.setsOrder(orderType);
 
         if (currentFolderId < 0) {
             spinner.setSelection(0);
         } else {
-            Folder folder = FolderDBUtil.findByFolderId(currentFolderId);
+            Folder folder = FolderDBHelper.findByFolderId(currentFolderId);
             if (folder == null) {
                 currentFolderId = -1;
                 spinner.setSelection(0);
             } else {
-                spinner.setSelection(FolderDBUtil.getRank(currentFolderId) + 1);
+                spinner.setSelection(FolderDBHelper.getRank(currentFolderId) + 1);
             }
         }
-        NoteDBUtil.setsFolderId(currentFolderId);
+        NoteDBHelper.setsFolderId(currentFolderId);
+        NoteDBHelper.setType(dbType);
 
         fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -179,7 +185,11 @@ public class MainActivity extends AppCompatActivity
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 setSelect(true);
                 MenuInflater inflater = mode.getMenuInflater();
-                inflater.inflate(R.menu.select_main, menu);
+                if (dbType == NoteDBHelper.GENERAL) {
+                    inflater.inflate(R.menu.select_main, menu);
+                } else if (dbType == NoteDBHelper.REMOVED) {
+                    inflater.inflate(R.menu.select_recycle, menu);
+                }
                 setStatusBarColor(getResources().getColor(R.color.gray3));
                 return true;
             }
@@ -198,7 +208,60 @@ public class MainActivity extends AppCompatActivity
                         return true;
                     }
                     case R.id.menu_remove: {
-                        remove(adapter.getSelectedSet());
+                        if (dbType == NoteDBHelper.GENERAL) {
+                            mTempInts.clear();
+                            mTempInts.addAll(adapter.getSelectedSet());
+                            Collections.sort(mTempInts);
+                            mTempNotes.clear();
+                            for (int i = 0; i < mTempInts.size(); i++) {
+                                mTempNotes.add(NoteDBHelper.get(mTempInts.get(i)));
+                            }
+
+                            remove(adapter.getSelectedSet(), false);
+                            done = true;
+                            if (actionMode != null) {
+                                actionMode.finish();
+                            }
+
+                            mSnackbar = Snackbar.make(recyclerView, "已将所选" + mTempInts.size() + "项移至回收站",
+                                    Snackbar.LENGTH_LONG)
+                                    .setAction("撤销", new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            Log.d(TAG, "onClick: 撤销");
+                                            for (int i = 0; i < mTempInts.size(); i++) {
+                                                NoteDBHelper.restore(mTempNotes.get(i));
+                                                adapter.notifyItemInserted(mTempInts.get(i));
+                                            }
+                                            updateRecyBg();
+                                            if (layoutType == MyViewHolderFactory.GRID) {
+                                                recyclerView.smoothScrollToPosition(mTempInts.get(0));
+                                            }
+                                            mTempNotes.clear();
+                                            mTempInts.clear();
+                                        }
+                                    });
+                            mSnackbar.show();
+                        } else if (dbType == NoteDBHelper.REMOVED) {
+                            new AlertDialog.Builder(MainActivity.this)
+                                    .setMessage("所选便签将被永久删除。确定继续？")
+                                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            remove(adapter.getSelectedSet(), true);
+                                            done = true;
+                                            if (actionMode != null) {
+                                                actionMode.finish();
+                                            }
+                                        }
+                                    })
+                                    .setNegativeButton("取消", null)
+                                    .show();
+                        }
+                        return true;
+                    }
+                    case R.id.menu_restore: {
+                        restore(adapter.getSelectedSet());
                         done = true;
                         if (actionMode != null) {
                             actionMode.finish();
@@ -206,16 +269,16 @@ public class MainActivity extends AppCompatActivity
                         return true;
                     }
                     default: {
-                        return false;
+                        return true;
                     }
                 }
             }
 
             @Override
             public void onDestroyActionMode(ActionMode mode) {
-                if(done){
+                if (done) {
                     updateRecyBg();
-                }else{
+                } else {
                     Set<Integer> set = adapter.getSelectedSet();
                     for (int i : set) {
                         adapter.notifyItemChanged(i);
@@ -237,11 +300,18 @@ public class MainActivity extends AppCompatActivity
         adapter.setNoteClickListener(new NoteClickListener() {
             @Override
             public void onClick(MyViewHolder holder) {
-                if (actionMode != null) {
+                if (dbType == NoteDBHelper.GENERAL) {
+                    if (actionMode != null) {
+                        adapter.select(holder);
+                    } else {
+                        NoteEditActivity.startForResult(MainActivity.this
+                                , holder.getAdapterPosition(), EDIT_NOTE);
+                    }
+                } else if (dbType == NoteDBHelper.REMOVED) {
+                    if (actionMode == null) {
+                        actionMode = startSupportActionMode(callback);
+                    }
                     adapter.select(holder);
-                } else {
-                    NoteEditActivity.startForResult(MainActivity.this
-                            , holder.getAdapterPosition(), EDIT_NOTE);
                 }
             }
 
@@ -267,7 +337,6 @@ public class MainActivity extends AppCompatActivity
             }
         });
         recyclerView.setAdapter(adapter);
-        // FIXME: 2018/8/15 
         recyclerView.getRecycledViewPool().setMaxRecycledViews(MyViewHolderFactory.DEFAULT, 15);
         recyclerView.getRecycledViewPool().setMaxRecycledViews(GRID, 10);
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -281,7 +350,7 @@ public class MainActivity extends AppCompatActivity
                         recyclerView.post(new Runnable() {
                             @Override
                             public void run() {
-                                if(GRID_LAYOUT.getItemCount()==0){
+                                if (GRID_LAYOUT.getItemCount() == 0) {
                                     return;
                                 }
                                 int[] intoStart = GRID_LAYOUT.findFirstVisibleItemPositions(null);
@@ -306,7 +375,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 adapter.setWidth(recyclerView.getWidth());
-                if(layoutType==MyViewHolderFactory.GRID){
+                if (layoutType == MyViewHolderFactory.GRID) {
                     adapter.notifyDataSetChanged();
                 }
             }
@@ -345,10 +414,48 @@ public class MainActivity extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
 
         switch (item.getItemId()) {
-            case R.id.all_note: {
+            case R.id.my_notes: {
+                if (dbType != NoteDBHelper.GENERAL) {
+                    dbType = NoteDBHelper.GENERAL;
+                    NoteDBHelper.setType(dbType);
+                    if (actionMode != null) {
+                        actionMode.finish();
+                    }
+                    getSupportActionBar().setDisplayShowTitleEnabled(false);
+                    spinner.setVisibility(View.VISIBLE);
+                    Log.d(TAG, "onNavigationItemSelected: "+currentFolderId);
+                    spinnerAdapter.notifyDataSetChanged();
+                    if(currentFolderId<0){
+                        adapter.notifyDataSetChanged();
+                        updateRecyBg();
+                    }else{
+                        spinner.setSelection(0);
+                    }
+                    AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
+                }
+                break;
+            }
+            case R.id.note_folder: {
+                if (actionMode != null) {
+                    actionMode.finish();
+                }
                 Intent intent = new Intent(this, FolderActivity.class);
                 startActivityForResult(intent, NOTE_FOLDER);
                 break;
+            }
+            case R.id.recycle_bin: {
+                if (dbType != NoteDBHelper.REMOVED) {
+                    dbType = NoteDBHelper.REMOVED;
+                    NoteDBHelper.setType(dbType);
+                    if (actionMode != null) {
+                        actionMode.finish();
+                    }
+                    getSupportActionBar().setDisplayShowTitleEnabled(true);
+                    spinner.setVisibility(View.GONE);
+                    updateRecyBg();
+                    fab.setVisibility(View.GONE);
+                    adapter.notifyDataSetChanged();
+                }
             }
         }
 
@@ -358,7 +465,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        MenuItem searchItem=menu.findItem(R.id.action_search);
+        MenuItem searchItem = menu.findItem(R.id.action_search);
 
         mSearchView = (SearchView) MenuItemCompat.getActionView(searchItem);
         mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -371,6 +478,25 @@ public class MainActivity extends AppCompatActivity
             public boolean onQueryTextChange(String newText) {
                 adapter.getFilter().filter(newText);
                 return false;
+            }
+        });
+        MenuItemCompat.setOnActionExpandListener(searchItem, new MenuItemCompat.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                fab.setVisibility(View.GONE);
+                isSearching = true;
+                recyclerView.setBackgroundColor(getResources().getColor(R.color.grayE));
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                if (dbType == NoteDBHelper.GENERAL) {
+                    fab.setVisibility(View.VISIBLE);
+                }
+                isSearching = false;
+                updateRecyBg();
+                return true;
             }
         });
         return true;
@@ -386,8 +512,8 @@ public class MainActivity extends AppCompatActivity
                 layoutDialog.show();
                 break;
             }
-            case R.id.action_order:{
-                if(orderDialog==null){
+            case R.id.action_order: {
+                if (orderDialog == null) {
                     initOrderDialog();
                 }
                 orderDialog.show();
@@ -398,24 +524,37 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // FIXME: 2018/8/16 完善
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+            if (mSnackbar != null && mSnackbar.isShown()) {
+                View view=mSnackbar.getView();
+                int[] out=new int[2];
+                view.getLocationOnScreen(out);
+                Rect mRect=new Rect(out[0],out[1], out[0]+view.getWidth(),
+                        out[1]+view.getHeight());
+                // 触摸snackbar以外的区域时不再显示snackbar
+                if (!mRect.contains((int)ev.getRawX(), (int)ev.getRawY())) {
+                    mSnackbar.dismiss();
+                    mSnackbar = null;
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
 
-        AnimationUtil.animateIn(fab,AnimationUtil.INTERPOLATOR,null);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
 
         if (requestCode == NEW_NOTE) {
-            if(actionMode!=null){
-                actionMode.finish();
-            }
-
             if (resultCode == RESULT_OK) {
                 int id = data.getIntExtra("id", 0);
-                int position = NoteDBUtil.getRank(id);
+                int position = NoteDBHelper.getRank(id);
                 adapter.notifyItemInserted(position);
                 updateRecyBg();
                 recyclerView.smoothScrollToPosition(position);
-            }else if(resultCode==RESULT_CANCELED){
-                Snackbar.make(recyclerView,"空便签将不会被添加",Snackbar.LENGTH_LONG)
+            } else if (resultCode == RESULT_CANCELED) {
+                Snackbar.make(recyclerView, "空便签将不会被添加", Snackbar.LENGTH_LONG)
                         .setAction("知道了", new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
@@ -425,15 +564,10 @@ public class MainActivity extends AppCompatActivity
                         .show();
             }
         } else if (requestCode == EDIT_NOTE) {
-            if(actionMode!=null){
-                actionMode.finish();
-            }
-
             if (resultCode == RESULT_OK) {
                 int index = data.getIntExtra("index", 0);
                 int id = data.getIntExtra("id", 0);
-                int position = NoteDBUtil.getRank(id);
-                Log.d(TAG, "onActivityResult: "+position);
+                int position = NoteDBHelper.getRank(id);
                 adapter.notifyItemMoved(index, position);
                 adapter.notifyItemChanged(position);
                 updateRecyBg();
@@ -445,7 +579,7 @@ public class MainActivity extends AppCompatActivity
                 adapter.notifyItemRemoved(index);
                 updateRecyBg();
 
-                Snackbar.make(recyclerView,"空便签已删除",Snackbar.LENGTH_LONG)
+                Snackbar.make(recyclerView, "空便签已删除", Snackbar.LENGTH_LONG)
                         .setAction("知道了", new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
@@ -455,45 +589,51 @@ public class MainActivity extends AppCompatActivity
                         .show();
             }
         } else if (requestCode == NOTE_FOLDER) {
-            if(actionMode!=null){
-                adapter.setSelect(false);
-                actionMode.finish();
-            }
-
             spinnerAdapter.notifyDataSetChanged();
 //            spinner.setAdapter(spinnerAdapter);
             if (resultCode == RESULT_CANCELED) {
                 // 判断便签夹是否已经被删除了
-                Folder folder = FolderDBUtil.findByFolderId(currentFolderId);
+                Folder folder = FolderDBHelper.findByFolderId(currentFolderId);
                 if (folder == null) {   // 被删除，切换到全部便签
                     currentFolderId = -1;
                     spinner.setSelection(0);
-                }else{  // 可能已经被改名，重新设置选中项
-                    spinner.setSelection(FolderDBUtil.getRank(currentFolderId)+1);
+                } else {  // 可能已经被改名，重新设置选中项
+                    spinner.setSelection(FolderDBHelper.getRank(currentFolderId) + 1);
+                }
+                if (dbType == NoteDBHelper.REMOVED) {
+                    fab.setVisibility(View.GONE);
                 }
             } else if (resultCode == RESULT_OK) {
+                if (dbType != NoteDBHelper.GENERAL) {
+                    dbType = NoteDBHelper.GENERAL;
+                    NoteDBHelper.setType(dbType);
+                    getSupportActionBar().setDisplayShowTitleEnabled(false);
+                    spinner.setVisibility(View.VISIBLE);
+                    updateRecyBg();
+                    AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
+                }
                 currentFolderId = data.getIntExtra("folderId", -1);
                 if (currentFolderId < 0) {
                     spinner.setSelection(0);
                 } else {
-                    spinner.setSelection(FolderDBUtil.getRank(currentFolderId) + 1);
+                    spinner.setSelection(FolderDBHelper.getRank(currentFolderId) + 1);
                 }
             }
 
-            NoteDBUtil.setsFolderId(currentFolderId);
+            NoteDBHelper.setsFolderId(currentFolderId);
             adapter.notifyDataSetChanged();
             updateRecyBg();
         }
     }
 
     private void initLayoutDialog() {
-        int checkedItem=0;
-        // FIXME: 2018/8/25 改用枚举,可以让映射更简单些
-        String itemText="";
-        if(layoutType==MyViewHolderFactory.DEFAULT){
-            itemText=layoutLinear;
-        }else if(layoutType==MyViewHolderFactory.GRID){
-            itemText=layoutGrid;
+        int checkedItem = 0;
+        // FIXME: 2018/8/25 改用枚举？
+        String itemText = "";
+        if (layoutType == MyViewHolderFactory.DEFAULT) {
+            itemText = layoutLinear;
+        } else if (layoutType == MyViewHolderFactory.GRID) {
+            itemText = layoutGrid;
         }
         for (int i = 0; i < layoutItems.length; i++) {
             if (itemText.equals(layoutItems[i])) {
@@ -522,11 +662,11 @@ public class MainActivity extends AppCompatActivity
                 .create();
     }
 
-    private void initOrderDialog(){
-        int checkedItem=0;
-        for(int i=0;i<orderItems.length;i++){
-            if(orderType.mTag.equals(orderItems[i])){
-                checkedItem=i;
+    private void initOrderDialog() {
+        int checkedItem = 0;
+        for (int i = 0; i < orderItems.length; i++) {
+            if (orderType.mTag.equals(orderItems[i])) {
+                checkedItem = i;
                 break;
             }
         }
@@ -534,11 +674,11 @@ public class MainActivity extends AppCompatActivity
                 .setSingleChoiceItems(orderItems, checkedItem, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        String tag=orderItems[i];
-                        Order e=Order.findByTag(tag);
-                        if(orderType!=e) {
-                            orderType=e;
-                            NoteDBUtil.setsOrder(orderType);
+                        String tag = orderItems[i];
+                        Order e = Order.findByTag(tag);
+                        if (orderType != e) {
+                            orderType = e;
+                            NoteDBHelper.setsOrder(orderType);
                             adapter.notifyDataSetChanged();
                         }
                         orderDialog.dismiss();
@@ -549,44 +689,87 @@ public class MainActivity extends AppCompatActivity
 
     private void setSelect(boolean select) {
         adapter.setSelect(select);
-        if (select) {
-            AnimationUtil.animateOut(fab, AnimationUtil.INTERPOLATOR, null);
-        } else {
-            AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
+        if (dbType == NoteDBHelper.GENERAL && !isSearching) {
+            if (select) {
+                AnimationUtil.animateOut(fab, AnimationUtil.INTERPOLATOR,
+                        new ViewPropertyAnimatorListener() {
+                            @Override
+                            public void onAnimationStart(View view) {
+
+                            }
+
+                            @Override
+                            public void onAnimationEnd(View view) {
+                                view.setVisibility(View.GONE);
+                            }
+
+                            @Override
+                            public void onAnimationCancel(View view) {
+
+                            }
+                        });
+            } else {
+                AnimationUtil.animateIn(fab, AnimationUtil.INTERPOLATOR, null);
+            }
         }
     }
 
-    public void remove(Set<Integer> set) {
+    public void remove(Set<Integer> set, boolean forever) {
         List<Integer> mList = new ArrayList<>(set.size());
-        for (Integer integer : set) {
-            mList.add(integer);
-        }
+        mList.addAll(set);
         // 升序排序
         Collections.sort(mList);
+        List<Note> mNotes = new ArrayList<>(mList.size());
+        for (int i = 0; i < mList.size(); i++) {
+            mNotes.add(NoteDBHelper.get(mList.get(i)));
+        }
 
         Note note;
-        int position;
-        for (int i = 0; i < mList.size(); i++) {
-            position = mList.get(i) - i;
-            note = NoteDBUtil.get(position);
-            NoteDBUtil.remove(note);
-            adapter.notifyItemRemoved(position);
+        for (int i = mList.size() - 1; i >= 0; i--) {
+            note = mNotes.get(i);
+            NoteDBHelper.remove(note, forever);
+            adapter.notifyItemRemoved(mList.get(i));
         }
     }
 
-    private void updateRecyBg(){
-        if(adapter.getItemCount()==0){
-            recyclerView.setBackgroundResource(R.drawable.blank_bg);
-        }else{
+    public void restore(Set<Integer> set) {
+        List<Integer> mList = new ArrayList<>(set.size());
+        mList.addAll(set);
+        // 升序排序
+        Collections.sort(mList);
+        List<Note> mNotes = new ArrayList<>(mList.size());
+        for (int i = 0; i < mList.size(); i++) {
+            mNotes.add(NoteDBHelper.get(mList.get(i)));
+        }
+
+        Note note;
+        for (int i = mList.size() - 1; i >= 0; i--) {
+            note = mNotes.get(i);
+            NoteDBHelper.restore(note);
+            adapter.notifyItemRemoved(mList.get(i));
+        }
+    }
+
+    private void updateRecyBg() {
+        if (isSearching) {
+            return;
+        }
+        if (adapter.getItemCount() == 0) {
+            if (dbType == NoteDBHelper.GENERAL) {
+                recyclerView.setBackgroundResource(R.drawable.blank_bg);
+            } else if (dbType == NoteDBHelper.REMOVED) {
+                recyclerView.setBackgroundResource(R.drawable.recycle_bin_blank_bg);
+            }
+        } else {
             recyclerView.setBackgroundColor(getResources().getColor(R.color.grayE));
         }
     }
 
-    private void updateRecyLayout(){
-        if(layoutType==MyViewHolderFactory.DEFAULT){
+    private void updateRecyLayout() {
+        if (layoutType == MyViewHolderFactory.DEFAULT) {
             recyclerView.setLayoutManager(DEFAULT_LAYOUT);
             recyclerView.setPadding(0, 0, 0, 8);
-        }else if(layoutType==MyViewHolderFactory.GRID){
+        } else if (layoutType == MyViewHolderFactory.GRID) {
             recyclerView.setLayoutManager(GRID_LAYOUT);
             recyclerView.setPadding(12, 0, 12, 12);
         }
@@ -613,19 +796,19 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void savePrefs(){
+    private void savePrefs() {
         SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
         editor.putInt("folderId", currentFolderId);
-        editor.putInt("layoutType",layoutType);
-        editor.putInt("orderType",orderType.mId);
+        editor.putInt("layoutType", layoutType);
+        editor.putInt("orderType", orderType.mId);
         editor.apply();
     }
 
-    private void loadPrefs(){
+    private void loadPrefs() {
         SharedPreferences pref = getPreferences(MODE_PRIVATE);
         currentFolderId = pref.getInt("folderId", -1);
-        layoutType=pref.getInt("layoutType",MyViewHolderFactory.DEFAULT);
-        int orderId=pref.getInt("orderType",-1);
-        orderType=Order.findById(orderId);
+        layoutType = pref.getInt("layoutType", MyViewHolderFactory.DEFAULT);
+        int orderId = pref.getInt("orderType", -1);
+        orderType = Order.findById(orderId);
     }
 }

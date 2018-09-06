@@ -25,11 +25,11 @@ public class MyDividerItemDecoration extends DividerItemDecoration {
         }else if(parent.getLayoutManager()instanceof StaggeredGridLayoutManager){
             outRect.set( 12,12,12,12);
         }
-//        outRect.set(12,12,12,12);
     }
 
     @Override
     public void onDraw(Canvas c, RecyclerView parent, RecyclerView.State state) {
+        // 不绘制分割线，各项之间的空隙由recyclerview背景填充就好了
 //        super.onDraw(c, parent, state);
     }
 }

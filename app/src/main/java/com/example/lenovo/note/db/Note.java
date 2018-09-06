@@ -10,13 +10,13 @@ public class Note extends DataSupport {
     private int id;
     private long createdTime;
     private long modifiedTime;
-    private String content;
+    private String content="";
+    private boolean isRemoved=false;
 
     public Note(){
         long currentTime=System.currentTimeMillis();
         createdTime=currentTime;
         modifiedTime=currentTime;
-        content="";
     }
 
     public int getId() {
@@ -49,5 +49,13 @@ public class Note extends DataSupport {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public boolean isRemoved() {
+        return isRemoved;
+    }
+
+    public void setRemoved(boolean removed) {
+        isRemoved = removed;
     }
 }

@@ -19,16 +19,11 @@ public abstract class MyViewHolder extends RecyclerView.ViewHolder {
     public abstract void bind(int position,boolean scroll,int w);
 
     void setSelect(boolean select){
+        // FIXME: 2018/9/6 使用view的选择接口
         if(select){
-//            itemView.setAlpha(0.3f);
-//            itemView.setBackgroundColor(MyApplication.getContext()
-//                    .getResources().getColor(R.color.grayA));
             itemView.setBackgroundColor(ContextCompat
                     .getColor(MyApplication.getContext(), R.color.grayC));
         }else{
-//            itemView.setBackgroundColor(MyApplication.getContext()
-//                    .getResources().getColor(R.color.white));
-//            itemView.setAlpha(1.0f);
             itemView.setBackgroundColor(ContextCompat
                     .getColor(MyApplication.getContext(),R.color.white));
         }

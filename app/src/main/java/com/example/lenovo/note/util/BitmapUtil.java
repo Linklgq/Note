@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.support.annotation.Nullable;
-import android.util.Log;
 import android.util.LruCache;
 
 import com.example.lenovo.note.MyApplication;
@@ -15,7 +14,6 @@ import com.example.lenovo.note.R;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import static android.content.ContentValues.TAG;
 import static android.graphics.BitmapFactory.decodeFile;
 import static android.graphics.BitmapFactory.decodeResource;
 
@@ -29,12 +27,12 @@ public class BitmapUtil {
     public static class BitmapCache extends LruCache<String,Bitmap>{
         public BitmapCache(int maxSize) {
             super(maxSize);
-            Log.d(TAG, "BitmapCache: "+maxSize/1024/1024+"MB");
+//            Log.d(TAG, "BitmapCache: "+maxSize/1024/1024+"MB");
         }
 
         @Override
         protected int sizeOf(String key, Bitmap value) {
-            Log.d(TAG, "sizeOf: "+value.getByteCount()/1024+"KB");
+//            Log.d(TAG, "sizeOf: "+value.getByteCount()/1024+"KB");
             return value.getByteCount();
         }
     }
@@ -75,7 +73,6 @@ public class BitmapUtil {
     /** 存入缓存*/
     public static void putCache(String key,Bitmap value){
         if(key==null||value==null){
-            Log.d(TAG, "putCache: key "+(key==null)+",value "+(value==null));
             return;
         }
         value=scaleTo(value,sCachedWidth,-1.0);
