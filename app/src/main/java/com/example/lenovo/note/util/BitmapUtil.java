@@ -5,6 +5,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.support.annotation.Nullable;
 import android.util.LruCache;
 
@@ -14,7 +15,6 @@ import com.example.lenovo.note.R;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import static android.graphics.BitmapFactory.decodeFile;
 import static android.graphics.BitmapFactory.decodeResource;
 
 /**
@@ -99,18 +99,30 @@ public class BitmapUtil {
 
     @Nullable
     public static Bitmap decodeFromFile(String filePath, int reqWidth){
+        int degree=getBitmapDegree(filePath);
         if(reqWidth<=0){
-            return BitmapFactory.decodeFile(filePath);
+            Bitmap result=BitmapFactory.decodeFile(filePath);
+            if(degree!=0){
+                result=rotateBitmapByDegree(result,degree);
+            }
+            return result;
         }
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig= Bitmap.Config.RGB_565;
         options.inJustDecodeBounds = true;
-        decodeFile(filePath,options);
-        options.inSampleSize = calculateSampleSize(options,reqWidth,0);
+        BitmapFactory.decodeFile(filePath,options);
+        if(degree==0||degree==180){
+            options.inSampleSize = calculateSampleSize(options,reqWidth,0);
+        }else{
+            options.inSampleSize = calculateSampleSize(options,0,reqWidth);
+        }
         options.inJustDecodeBounds =false;
         Bitmap temp=BitmapFactory.decodeFile(filePath,options);
         if(temp==null){
             return null;
+        }
+        if(degree!=0){
+            temp=rotateBitmapByDegree(temp,degree);
         }
         Bitmap result=scaleTo(temp,reqWidth,-1.0);
         return result;
@@ -193,5 +205,43 @@ public class BitmapUtil {
             inSampleSize*=2;
         }
         return inSampleSize;
+    }
+
+    private static int getBitmapDegree(String filePath){
+        int degree=0;
+        try {
+            ExifInterface exifInterface=new ExifInterface(filePath);
+            int orientation=exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL);
+            switch(orientation){
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    degree = 90;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    degree = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    degree = 270;
+                    break;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return degree;
+    }
+
+    private static Bitmap rotateBitmapByDegree(Bitmap bitmap,int degree){
+        Bitmap result=null;
+        Matrix matrix=new Matrix();
+        matrix.postRotate(degree);
+        result=Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),
+                matrix,true);
+        if(result==null){
+            result=bitmap;
+        }
+        if(bitmap!=result){
+            bitmap.recycle();
+        }
+        return result;
     }
 }
